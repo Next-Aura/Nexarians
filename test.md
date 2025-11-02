@@ -1,10 +1,10 @@
-# GSBR – Gradient Supported Basic Regressor
+# GSBC – Gradient Supported Basic Classifier
 
 ## Overview
 
-GSBR (Gradient Supported Basic Regressor) is a lightweight, custom linear regression model implemented in Python. It supports optimization via **gradient descent** and includes regularization options such as **L1 (Lasso)**, **L2 (Ridge)**, and **ElasticNet** to prevent overfitting. The model can minimize **MSE**, **RMSE**, or **MAE** loss functions. It works with both dense and sparse matrices, offers early stopping, data shuffling, and multi-level verbose logging.
+GSBC (Gradient Supported Basic Classifier) is a lightweight, custom linear classification model implemented in Python. It supports optimization via **gradient descent** with **softmax** for multi-class classification and includes regularization options such as **L1 (Lasso)**, **L2 (Ridge)**, and **ElasticNet** to prevent overfitting. The model minimizes **categorical cross-entropy** loss. It works with both dense and sparse matrices, offers early stopping, data shuffling, and multi-level verbose logging.
 
-Perfect for teaching, quick prototyping, or when you need a simple, interpretable regressor without heavy dependencies.
+Perfect for teaching, quick prototyping, or when you need a simple, interpretable classifier without heavy dependencies.
 
 ## Installation & Requirements
 
@@ -13,53 +13,58 @@ pip install numpy scipy
 ```
 
 ```python
-from BasicModels.GSBR import BasicRegressor
+from BasicModels.GSBC import BasicClassifier
 ```
 
 ## Mathematical Formulation
 
 ### Prediction Function
 $$
-\hat{y} = Xw + b
+z = Xw + b
+$$
+$$
+\hat{p} = \text{softmax}(z)
 $$
 
 - $X$ – feature matrix  
-- $w$ – weight vector  
-- $b$ – bias (if `fit_intercept=True`)
+- $w$ – weight matrix (features × classes)  
+- $b$ – bias vector (if `fit_intercept=True`)  
+- $\hat{p}$ – predicted class probabilities
 
 ### Loss Functions
 
-- **MSE (Mean Squared Error)**: $\frac{1}{N}\sum_{i=1}^{N}(y_i - \hat{y}_i)^2$
-- **RMSE (Root Mean Squared Error)**: $\sqrt{\frac{1}{N}\sum_{i=1}^{N}(y_i - \hat{y}_i)^2}$
-- **MAE (Mean Absolute Error)**: $\frac{1}{N}\sum_{i=1}^{N}|y_i - \hat{y}_i|$
+- **Categorical Cross-Entropy**: $-\frac{1}{N}\sum_{i=1}^{N}\sum_{c=1}^{C} y_{i,c} \log(\hat{p}_{i,c})$  
+(where $y$ is one-hot encoded, $C$ is number of classes)
 
 ### Regularization
 Added to the loss to control model complexity:
 
-- **L1 (Lasso)**: $\alpha \sum |w_i|$
-- **L2 (Ridge)**: $\alpha \sum w_i^2$
-- **ElasticNet**: $\alpha \bigl[ l1\_ratio \sum |w_i| + (1-l1\_ratio)\sum w_i^2 \bigr]$
+- **L1 (Lasso)**: $\alpha \sum |w_{i,j}|$
+- **L2 (Ridge)**: $\alpha \sum w_{i,j}^2$
+- **ElasticNet**: $\alpha \bigl[ l1\_ratio \sum |w_{i,j}| + (1-l1\_ratio)\sum w_{i,j}^2 \bigr]$
 
 Total loss = *base loss* + *regularization term*.
 
-### Gradients (example for MSE)
+### Gradients (example for Cross-Entropy)
 $$
-\frac{\partial L}{\partial w} = \frac{2}{N}X^{T}(Xw + b - y) + \text{regularization gradient}
+\frac{\partial L}{\partial w} = \frac{1}{N}X^{T}(\hat{p} - y) + \text{regularization gradient}
 $$
 $$
-\frac{\partial L}{\partial b}= \frac{2}{N}\sum (Xw + b - y)
+\frac{\partial L}{\partial b}= \frac{1}{N}\sum (\hat{p} - y)
 $$
 
-MAE uses the **sign** function; RMSE normalises by the current RMSE value.
+Supports class weighting for imbalanced data.
 
 ## Key Features
 - **Regularization**: L1 / L2 / ElasticNet / None  
-- **Losses**: MSE, RMSE, MAE  
+- **Loss**: Categorical Cross-Entropy  
 - **Input**: dense `np.ndarray` **or** SciPy sparse matrices  
 - **Optimization**: gradient descent with learning-rate control  
 - **Early stopping** on loss convergence (`tol`)  
 - **Shuffling** + `random_state` for reproducibility  
 - **Verbose levels** (0/1/2)  
+- **Multi-class** support via softmax  
+- **Class weighting** for imbalanced datasets  
 
 ## Parameters
 
@@ -70,7 +75,6 @@ MAE uses the **sign** function; RMSE normalises by the current RMSE value.
 | `penalty` | `Literal['l1','l2','elasticnet'] \| None` | `'l2'` | Regularization type |
 | `alpha` | `float` | `0.0001` | Regularization strength |
 | `l1_ratio` | `float` | `0.5` | ElasticNet mix (0 = L2, 1 = L1) |
-| `loss` | `Literal['mse','rmse','mae']` | `'mse'` | Loss function |
 | `fit_intercept` | `bool` | `True` | Add bias term |
 | `tol` | `float` | `0.0001` | Early-stop tolerance |
 | `shuffle` | `bool` | `True` | Shuffle data each epoch |
@@ -82,13 +86,15 @@ MAE uses the **sign** function; RMSE normalises by the current RMSE value.
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
-| `weights` | `np.ndarray` | Learned coefficients |
-| `b` | `float` | Bias (intercept) |
+| `weights` | `np.ndarray` | Learned coefficients (features × classes) |
+| `b` | `np.ndarray` | Bias vector |
 | `loss_history` | `List[float]` | Loss per iteration |
+| `classes` | `np.ndarray` | Unique class labels |
+| `n_classes` | `int` | Number of unique classes |
 
 ## API Reference
 
-### `BasicRegressor.__init__(...)`
+### `BasicClassifier.__init__(...)`
 Creates the model with the hyper-parameters above.
 
 ### `fit(X_train, y_train)`
@@ -97,39 +103,44 @@ Trains via gradient descent.
 - **Raises** `ValueError` for NaN/Inf or shape mismatch  
 - **Raises** `OverflowError` if weights/bias become NaN/Inf
 
+### `predict_proba(X_test)`
+Returns predicted class probabilities $\hat{p}$ for new samples.
+
+- **Raises** `ValueError` if model not fitted
+
 ### `predict(X_test)`
-Returns $\hat{y}$ for new samples.
+Returns predicted class labels (argmax of probabilities).
 
 - **Raises** `ValueError` if model not fitted
 
 ## Usage Examples
 
-### 1. L2 + MSE (default)
+### 1. L2 (default)
 ```python
 import numpy as np
-from sklearn.datasets import make_regression
-from BasicModels.GSBR import BasicRegressor
+from sklearn.datasets import make_classification
+from BasicModels.GSBC import BasicClassifier
 
-X, y = make_regression(n_samples=200, n_features=10, noise=0.2, random_state=42)
+X, y = make_classification(n_samples=200, n_features=10, n_classes=3, n_informative=5, random_state=42)
 
-model = BasicRegressor(max_iter=1500, learning_rate=0.02,
-                       penalty='l2', alpha=0.05, verbose=1)
+model = BasicClassifier(max_iter=1500, learning_rate=0.02,
+                        penalty='l2', alpha=0.05, verbose=1)
 model.fit(X, y)
 
 print(f"Loss: {model.loss_history[-1]:.6f}")
-print(f"Weights (mean): {model.weights.mean():.6f}, bias: {model.b:.6f}")
+print(f"Weights (mean): {model.weights.mean():.6f}, bias (mean): {np.mean(model.b):.6f}")
 ```
 
-### 2. ElasticNet + MAE + scaling
+### 2. ElasticNet + scaling
 ```python
 from sklearn.preprocessing import StandardScaler
 
 scaler = StandardScaler()
 X_sc = scaler.fit_transform(X)
 
-model = BasicRegressor(penalty='elasticnet', alpha=0.01, l1_ratio=0.7,
-                       loss='mae', max_iter=3000, learning_rate=0.005,
-                       shuffle=True, random_state=123, verbose=2)
+model = BasicClassifier(penalty='elasticnet', alpha=0.01, l1_ratio=0.7,
+                        max_iter=3000, learning_rate=0.005,
+                        shuffle=True, random_state=123, verbose=2)
 model.fit(X_sc, y)
 ```
 
@@ -138,9 +149,9 @@ model.fit(X_sc, y)
 from scipy.sparse import csr_matrix
 
 X_sp = csr_matrix(np.random.randn(500, 200))
-y_sp = np.random.randn(500)
+y_sp = np.random.randint(0, 3, 500)  # 3 classes
 
-model = BasicRegressor(penalty=None, max_iter=800, learning_rate=0.03)
+model = BasicClassifier(penalty=None, max_iter=800, learning_rate=0.03)
 model.fit(X_sp, y_sp)
 ```
 
@@ -167,10 +178,11 @@ plt.show()
 - **NaN/Inf** in `X` or `y` → `ValueError`  
 - **Shape mismatch** → `ValueError`  
 - **Numerical overflow** during training → `OverflowError` (stops early)  
+- **Fewer than 2 classes** → `ValueError`
 
 ## Performance Notes
 
-| Aspect | GSBR |
+| Aspect | GSBC |
 |--------|------|
 | **Speed** | Batch GD – good for ≤ 10 k samples |
 | **Memory** | Sparse-friendly (`csr_matrix`, `csc_matrix`) |
@@ -178,15 +190,15 @@ plt.show()
 
 ## Comparison with scikit-learn
 
-| Feature | GSBR | scikit-learn |
+| Feature | GSBC | scikit-learn |
 |---------|------|--------------|
 | Regularization | L1/L2/ElasticNet/None | Yes |
-| Loss options | MSE/RMSE/MAE | MSE only |
-| Solver | Gradient descent | Analytical (OLS, SVD) |
+| Loss options | Cross-Entropy | Cross-Entropy |
+| Solver | Gradient descent | LBFGS, SAG, etc. |
 | Early stopping | Yes | Limited |
-| Shuffling / seed | Yes | No |
+| Shuffling / seed | Yes | Partial |
 | Verbose levels | 0/1/2 | Basic |
 
 ## License
 
-Part of the **BasicModels** package – MIT (or as specified in the repository).
+Part of the **NexGML** package – MIT (or as specified in the repository).
