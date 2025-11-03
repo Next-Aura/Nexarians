@@ -1,0 +1,13 @@
+[project]
+name = "nexgml"
+version = "0.1.0"
+description = "NexGML — Next Generation Machine Learning (educational ML utilities)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [ {name = "Nexo-kun"} ]
+dependencies = ["numpy>=1.23","scipy>=1.10", "numba>=0.56", "typing_extensions"]
+
+[build-system]
+requires = ["setuptools>=61.0","wheel"]
+build-backend = "setuptools.build_meta"
