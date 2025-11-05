@@ -29,7 +29,7 @@ Kursus ini dirancang simpel supaya gampang dipahami, tapi ada beberapa hal yang 
 
 Aku cuma anak muda yang excited banget sama AI dan pembelajaran mesin! Bikin kursus mini ini adalah caraku buat bagi-bagi ilmu yang aku pelajari, sambil bikin topik yang keliatannya ribet ini jadi fun dan gampang dicerna. Aku bukan profesor atau ahli AI senior—cuma orang biasa yang suka ngulik, belajar dari AI, video, sama komunitas online, dan pengen ngajak kalian ikutan nyemplung ke dunia AI.
 
-Kenapa aku bikin ini? Karena aku percaya AI itu kayak alat 'ajaib' yang bisa bantu selesain banyak masalah, dan juga untuk sekalian membangun komunitas DAJCo yang diniatkan sebagai tempat belajar terbuka, dan semua orang—termasuk anak muda kayak kita—bisa belajar dan bikin sesuatu yang keren pake AI. Jadi, kalo kursus ini bikin kalian penasaran buat ngulik lebih jauh, misi aku berhasil!
+Kenapa aku bikin ini? Karena aku percaya AI itu kayak alat 'ajaib' yang bisa bantu selesain banyak masalah, dan juga untuk sekalian membangun komunitas Nexarians yang diniatkan sebagai tempat belajar terbuka, dan semua orang—termasuk anak muda kayak kita—bisa belajar dan bikin sesuatu yang keren pake AI. Jadi, kalo kursus ini bikin kalian penasaran buat ngulik lebih jauh, misi aku berhasil!
 
 ---
 

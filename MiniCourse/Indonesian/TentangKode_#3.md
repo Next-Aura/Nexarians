@@ -32,7 +32,7 @@ jupyter notebook
 
 ### Langkah Demi Langkah: Nebakin Harga Rumah
 
-Kita bakal pake contoh harga rumah dari pelajaran sebelumnya dan bikin model sederhana pake **Regresi Linear**. Yuk, ikutin langkah-langkahnya:
+Kita bakal pake contoh harga rumah dari pelajaran sebelumnya dan bikin model sederhana pake **LinearRegression**. Yuk, ikutin langkah-langkahnya:
 
 #### 1. Ambil Toolkit (Import Library)
 

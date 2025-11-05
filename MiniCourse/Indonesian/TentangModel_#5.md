@@ -16,28 +16,28 @@ Bayangin kamu cuma punya satu pisau di dapur. Bisa sih masak, tapi motong sayur,
 
 Berikut beberapa model populer selain regresi linear, dijelasin pake bahasa sederhana plus analogi biar gampang kebayang.
 
-1. **Pohon Keputusan (Decision Tree)**  
+1. **Decision Tree**  
    - **Apa itu?** Model yang bikin keputusan dengan nanya ya/tidak, kayak flowchart.  
    - **Analogi:** Mirip main tebak-tebakan—mulai dari pertanyaan besar (misalnya, "Rumahnya lebih dari 120 m²?") lalu nyempitin ke prediksi.  
    - **Kapan dipakai?** Buat klasifikasi (misalnya, ya/tidak) atau regresi dengan data yang nggak lurus. Cocok kalau mau hasil yang gampang dimengerti.  
    - **Kelebihan:** Gampang dipahami dan bisa divisualisasikan.  
    - **Kekurangan:** Bisa overfit kalau pohonnya terlalu "rimbun".  
 
-2. **Hutan Acak (Random Forest)**  
+2. **Random Forest**  
    - **Apa itu?** Sekelompok pohon keputusan yang kerja bareng, kayak tim yang voting buat keputusan terbaik.  
    - **Analogi:** Seperti nanya ke beberapa temen soal harga rumah, terus ambil rata-rata jawabannya biar lebih akurat.  
    - **Kapan dipakai?** Buat klasifikasi atau regresi, apalagi kalau datanya rumit dan mau hasil yang lebih stabil.  
    - **Kelebihan:** Jago nangani data kompleks dan nggak gampang salah.  
    - **Kekurangan:** Agak lambat latihnya dan susah dimengerti dibanding pohon tunggal.  
 
-3. **Mesin Vektor Pendukung (SVM)**  
+3. **Support Vector Machine (SVM)**  
    - **Apa itu?** Model yang nyari "garis" terbaik buat misahin data.  
    - **Analogi:** Bayangin gambar jalan lebar yang misahin dua kelompok rumah (misalnya, mahal vs murah) tanpa nyelonong ke sisi lain.  
    - **Kapan dipakai?** Buat klasifikasi dengan batas jelas atau regresi. Cocok buat data kecil.  
    - **Kelebihan:** Jago di data dengan banyak dimensi.  
    - **Kekurangan:** Bisa lambat di data besar dan butuh nyetel parameter dengan hati-hati.  
 
-4. **K-Tetangga Terdekat (KNN)**  
+4. **K-Nearest Neighbor (KNN)**  
    - **Apa itu?** Model "malas" yang prediksi berdasarkan tetangga terdekat dari data.  
    - **Analogi:** Seperti nanya ke tetangga sebelah berapa harga rumah mereka buat nebak harga rumahmu.  
    - **Kapan dipakai?** Buat klasifikasi atau regresi sederhana, terutama di data kecil.  
@@ -76,7 +76,7 @@ y = df['Harga']
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 ```
 
-#### 2. Latih dan Cek Regresi Linear (Sekadar Review)
+#### 2. Latih dan Cek LinearRegression (Sekadar Review)
 
 ```python
 lr_model = LinearRegression()
@@ -89,7 +89,7 @@ lr_r2 = r2_score(y_test, lr_pred)
 print(f"Regresi Linear - MAE: ${lr_mae:,.0f}, R²: {lr_r2:.2f}")
 ```
 
-#### 3. Latih dan Cek Pohon Keputusan
+#### 3. Latih dan Cek Pohon Keputusan (Decision Tree)
 
 ```python
 dt_model = DecisionTreeRegressor(random_state=42)
@@ -102,7 +102,7 @@ dt_r2 = r2_score(y_test, dt_pred)
 print(f"Pohon Keputusan - MAE: ${dt_mae:,.0f}, R²: {dt_r2:.2f}")
 ```
 
-#### 4. Latih dan Cek Hutan Acak
+#### 4. Latih dan Random Forest
 
 ```python
 rf_model = RandomForestRegressor(n_estimators=100, random_state=42)

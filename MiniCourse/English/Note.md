@@ -29,7 +29,7 @@ This course is designed to be simple and easy to understand, but there are a few
 
 I'm just a young person who's really excited about AI and machine learning! Creating this mini-course is my way of sharing my knowledge, while making this seemingly complicated topic fun and easy to understand. I'm not a professor or a senior AI expert—just a regular person who enjoys exploring, learning from AI, videos, and online communities, and I want to invite you to dive into the world of AI.
 
-Why did I create this? Because I believe AI is like a 'magic' tool that can help solve many problems, and also to build the DAJCo community, which is intended to be an open learning space where everyone—including young people like us—can learn and create cool things using AI. So, if this course has piqued your curiosity to explore further, my mission has been successful!
+Why did I create this? Because I believe AI is like a 'magic' tool that can help solve many problems, and also to build the Nexarians community, which is intended to be an open learning space where everyone—including young people like us—can learn and create cool things using AI. So, if this course has piqued your curiosity to explore further, my mission has been successful!
 
 ---
 

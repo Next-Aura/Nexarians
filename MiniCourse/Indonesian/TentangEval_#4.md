@@ -161,4 +161,4 @@ print(f"R² dengan Lokasi: {r2:.2f}")
 
 ### Apa Selanjutnya?
 
-Di pelajaran berikutnya, kita bakal jelajahi jenis model lain (selain regresi linear) dan kapan harus pakai mereka. Tetap semangat ngulik dan sampai ketemu lagi!
+Di pelajaran berikutnya, kita bakal jelajahi jenis model lain (selain LinearRegression) dan kapan harus pakai mereka. Tetap semangat ngulik dan sampai ketemu lagi!
