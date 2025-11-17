@@ -327,7 +327,7 @@ class BasicRegressor:
                 # Plateau learning rate scheduler
                 elif self.lr_scheduler == 'plateau':
                     # Compute full dataset loss
-                    current_loss = self._calculate_loss(y_processed, self.weights @ X_processed + self.b if self.intercept else self.weights @ X_processed)
+                    current_loss = self._calculate_loss(y_processed, X_processed @ self.weights + self.b if self.intercept else X_processed @ self.weights)
                     if current_loss < self.best_loss - self.epsilon:
                         # Update best loss
                         self.best_loss = current_loss

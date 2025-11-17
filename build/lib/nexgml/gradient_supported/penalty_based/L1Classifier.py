@@ -60,10 +60,6 @@ class L1Classifier:
         self.n_classes = None                      # Number of unique classes (determined during fit)
         self.loss_history = []                     # Store residual history per epoch
 
-        # ---------- Random state setup ----------
-        if self.random_state:
-            np.random.seed(self.random_state)
-
     def _soft_threshold(self, z: np.ndarray, gamma: float) -> np.ndarray:
         """
         Soft thresholding operator for L1 regularization.
