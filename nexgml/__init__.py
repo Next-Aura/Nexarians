@@ -25,6 +25,12 @@ A collection of educational ML implementations.
 
 __version__ = "1.0.0"
 
+import sys
+from nexgml.modelkit.nexg import ModelLike
+from nexgml.model_configs.Config import AdvancedConfig
+
 __all__ = [
+    'ModelLike', 
+    "AdvancedConfig", 
     "__version__",
     ]
