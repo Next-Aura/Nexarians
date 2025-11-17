@@ -1,4 +1,4 @@
-# NexGML Helper: `Indexing`
+# Indexing
 
 ## Overview
 
