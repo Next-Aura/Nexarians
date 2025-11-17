@@ -13,10 +13,7 @@ pip install nexgml
 NexGML is a custom Machine Learning utility built for educational and research purposes, emphasizing **code transparency** and **high performance**.
 
 ### Key Features & Technology Stack
-
-  * **JIT Acceleration:** Core math operations (`nexgml.helper.amo` and `nexgml.helper.indexing`) are optimized using **Numba** for near C-speed performance.
-  * **Advanced Optimization:** Includes modern solvers like **Adam** and **AdamW** in classifiers.
-  * **Modular Helpers:** Separates complex logic into focused helper modules (`AMO`, `ForTree`, `Indexing`) for easy customization.
+  * **Modular Helpers:** Separates complex logic into focused helper modules (`ForLinear`, `ForTree`, `Indexing`) for easy customization.
   * **Sparse Data Ready:** Full support for `scipy.sparse` matrices (CSR/CSC) for memory efficiency.
 
 -----
@@ -50,9 +47,9 @@ These modules contain the high-speed math used internally.
 
 | Module | Purpose | Example Usage |
 | :--- | :--- | :--- |
-| `nexgml.helper.amo` | **Advanced Math Operations.** Activation/Loss functions (Softmax, CCE, RMSE). | `AMO.softmax(logits)` |
-| `nexgml.helper.amo.ForTree` | **Tree Criteria.** Impurity measures (Gini, Entropy, Friedman MSE). | `ForTree.gini_impurity(labels)` |
-| `nexgml.helper.Indexing` | **Data Utilities.** One-hot encoding, smart feature slicing (`standard_indexing`). | `Indexing.standard_indexing(n_features, 'sqrt')` |
+| `nexgml.amo.forlinear` | **Linear Criteria.** Activation/Loss functions (Softmax, CCE, RMSE). | `forlinear.softmax(logits)` |
+| `nexgml.amo.fortree` | **Tree Criteria.** Impurity measures (Gini, Entropy, Friedman MSE). | `fortree.gini_impurity(labels)` |
+| `nexgml.indexing` | **Data Utilities.** One-hot encoding, smart feature slicing (`standard_indexing`). | `indexing.standard_indexing(n_features, 'sqrt')` |
 
 ## 📝 Documentation & Exploration
 

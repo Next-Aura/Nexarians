@@ -1,0 +1,541 @@
+# ========== LIBRARIES ==========
+import numpy as np                            # Numpy for numerical computations
+from scipy.sparse import issparse, spmatrix   # For sparse matrix handling
+from typing import Literal, Optional          # More specific type hints
+from nexgml.amo import forlinear              # For some math operation
+from nexgml.indexing import one_hot_labeling  # For one-hot labeling
+
+# ========== THE MODEL ==========
+class MRClassifier:
+    """
+    Mini-batch Regression Classifier (MRC) is a linear classifier that uses mini-batch gradient descent optimization with softmax for multi-class classification.
+    It supports L1, L2, and Elastic Net regularization to prevent overfitting, and learning rate schedulers (constant, invscaling, plateau).
+    Regression loss is used.
+    Supports sparse matrices for memory efficiency and includes early stopping for robust training.
+    """
+    def __init__(
+        self,  
+        max_iter: int=1000, 
+        learning_rate: float=0.01,
+        penalty: Optional[Literal["l1", "l2", "elasticnet"]] | None="l2", 
+        alpha: float=0.0001, 
+        l1_ratio: float=0.5,
+        loss: Literal["mse", "rmse", 'mae', 'smoothl1'] | None="mse",
+        fit_intercept: bool=True, 
+        tol: float=0.0001, 
+        shuffle: bool | None=True, 
+        random_state: int | None=None, 
+        early_stopping: bool=True,
+        verbose: int=0,
+        lr_scheduler: Literal["constant", "invscaling", 'plateau'] | None='invscaling', 
+        batch_size: int=16, 
+        power_t: float=0.25, 
+        patience: int=5, 
+        factor: float=0.5, 
+        delta: float=1.0,
+        stoic_iter: int | None = 10
+            ):
+        """
+        Initialize the Mini-batch Regression Classifier model.
+
+        ## Args:
+            **max_iter**: *int, default=1000*
+            Maximum number of training iterations (epochs).
+
+            **learning_rate**: *float, default=0.01*
+            Initial step size for optimizer updates.
+
+            **penalty**: *{'l1', 'l2', 'elasticnet'} or None, default='l2'*
+            Type of regularization ('l1', 'l2', 'elasticnet') or None.
+
+            **alpha**: *float, default=0.0001*
+            Regularization strength (used if penalty is not None).
+
+            **l1_ratio**: *float, default=0.5*
+            Mixing parameter for elastic net (0 <= l1_ratio <= 1).
+
+            **loss**: *{'mse', 'rmse', 'mae', 'smoothl1'}, default='mse'*
+            Type of loss function.
+
+            **fit_intercept**: *bool, default=True*
+            If True, include a bias term (intercept).
+
+            **tol**: *float, default=0.0001* 
+            Tolerance for early stopping based on loss convergence.
+
+            **shuffle**: *bool, default=True*
+            If True, shuffle data each epoch.
+
+            **random_state**: *float, default=None*
+            Seed for random number generator for reproducibility.
+
+            **early_stopping**: *bool, default=True*
+            If true, will make the model end the training loop early if the model performance plateaus.
+
+            **verbose**: *int, default=0*
+            If 1, print training progress (epoch, loss, etc.).
+            
+            **lr_scheduler**: *{'constant', 'invscaling', 'plateau'} or None, default='invscaling'*
+            Strategy for learning rate adjustment over iterations.
+
+            **batch_size**: *int, default=16*
+            Number of samples per mini-batch when using mini-batch gradient descent (MBGD, Adam, AdamW).
+            
+            **power_t**: *float, default=0.25*
+            The exponent for inverse scaling learning rate schedule (used if lr_scheduler='invscaling').
+
+            **patience**: *int, default=5*
+            Number of epochs to wait for loss improvement before reducing learning rate (used if lr_scheduler='plateau').
+
+            **factor**: *float, default=0.5*
+            Factor by which the learning rate will be reduced (used if lr_scheduler='plateau').
+
+            **delta**: *float, default=1.0*
+            Threshold for the Smooth L1 loss function.
+
+            **stoic_iter**: *int or None, default=10*
+            Number of initial epochs to skip before checking for convergence/tolerance in early stopping.
+
+        ## Returns:
+            **None**
+
+        ## Raises:
+            **ValueError**: *If invalid loss, penalty, or lr_scheduler type is provided.*
+        """
+        # ========== PARAMETER VALIDATION ==========
+        if penalty not in {'l1', 'l2', 'elasticnet', None}:
+            raise ValueError(f"Invalid penalty argument {penalty}. Choose from 'l1', 'l2', 'elasticnet', or None.")
+        
+        if lr_scheduler not in {'invscaling', 'constant', 'plateau'}:
+            raise ValueError(f"Invalid lr_scheduler argument {lr_scheduler}. Choose from 'invscaling', 'constant', or 'plateau'.")
+        
+        if loss not in ('mse', 'rmse', 'mae', 'smoothl1'):
+            raise ValueError(f"Invalid loss argument, {loss}. Choose from 'mse', 'rmse', 'mae', or 'smoothl1'.")
+
+        # ========== HYPERPARAMETERS ==========
+        self.max_iter = int(max_iter)              # Maximum number of training iterations (epochs)
+        self.penalty = penalty                     # Regularization penalty type ('l1', 'l2', 'elasticnet', or None)
+        self.lr_scheduler = lr_scheduler           # Learning rate scheduler type ('invscaling', 'constant', 'plateau')
+        self.learning_rate = float(learning_rate)  # Initial learning rate for gradient descent
+        self.alpha = float(alpha)                  # Regularization strength (controls penalty magnitude)
+        self.l1_ratio = float(l1_ratio)            # Elastic net mixing ratio between L1 and L2 (0 to 1)
+        self.intercept = bool(fit_intercept)       # Whether to fit an intercept (bias) term
+        self.tol = float(tol)                      # Tolerance for early stopping based on loss improvement
+        self.power_t = float(power_t)              # Power parameter for inverse scaling learning rate scheduler
+        self.batch_size = int(batch_size)          # Number of samples per batch for mini-batch gradient descent
+        self.shuffle = bool(shuffle)               # Whether to shuffle training data each epoch
+        self.random_state = random_state           # Random seed for reproducible shuffling and initialization
+        self.patience = int(patience)              # Number of epochs to wait before reducing learning rate (plateau)
+        self.factor = float(factor)                # Factor by which to reduce learning rate on plateau
+        self.early_stop = bool(early_stopping)     # Whether to enable early stopping
+        self.verbose = int(verbose)                # Verbosity level for training progress logging (0: silent, 1: progress)
+        self.stoic_iter = int(stoic_iter)          # Warm-up iterations before applying early stopping and lr scheduler
+        self.loss = loss                           # Loss function type
+        self.delta = delta                         # # Huber loss threshold
+
+        # ========== INTERNAL VARIABLES ==========
+        self.epsilon = 1e-15                       # Small constant to prevent division by zero in computations
+        self.weights = None                        # Model weights (coefficients) matrix of shape (n_features, n_classes)
+        self.b = None                              # Bias term vector of shape (n_classes,)
+        self.loss_history = []                     # List to store loss values for each training epoch
+        self.classes = None                        # Array of unique class labels from training data
+        self.n_classes = 0                         # Number of unique classes (determined during fit)
+        self.current_lr = None                     # Current learning rate during training (updated by scheduler)
+        self.best_loss = float('inf')              # Best loss achieved (used for plateau scheduler)
+        self.wait = 0                              # Counter for epochs without improvement (plateau scheduler)
+
+    # ========= HELPER METHODS =========
+    def _calculate_loss(self, y_true: np.ndarray, y_pred_proba: np.ndarray) -> float:
+        """
+        Compute categorical cross-entropy loss with regularization.
+
+        ## Args:
+            **y_true**: *np.ndarray*
+            True one-hot encoded labels.
+            
+            **y_pred_proba**: *np.ndarray*
+            Predicted class probabilities.
+
+        ## Returns:
+            **float**: *Computed loss value.*
+
+        ## Raises:
+            **None**
+        """
+        
+        if self.loss == 'mse':
+          loss = forlinear.mean_squared_error(y_true, y_pred_proba)
+
+        elif self.loss == 'rmse':
+          loss = forlinear.root_squared_error(y_true, y_pred_proba)
+
+        elif self.loss == 'mae':
+          loss = forlinear.mean_absolute_error(y_true, y_pred_proba)
+
+        elif self.loss == 'smoothl1':
+          loss = forlinear.smoothl1_loss(y_true, y_pred_proba, self.delta)
+
+        # Initialize regularization term
+        # L1 regularization
+        if self.penalty == "l1":
+            loss += forlinear.lasso(self.weights, self.alpha)
+        
+        # L2 regularization
+        elif self.penalty == "l2":
+            loss += forlinear.ridge(self.weights, self.alpha)
+        
+        # Elastic Net
+        elif self.penalty == 'elasticnet':
+            loss += forlinear.elasticnet(self.weights, self.alpha, self.l1_ratio)
+
+        return loss
+
+    def _calculate_grad(self, X: np.ndarray | spmatrix, y: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Compute gradients of the categorical cross-entropy loss with respect to weights and bias.
+
+        Supports both dense and sparse matrices for efficient computation.
+        Note: Regularization gradients are NOT computed here; they are applied
+        during the optimizer update step (e.g., L2 in AdamW or handled by the loss function).
+
+        ## Args:
+            **X**: *np.ndarray or spmatrix*
+            Input features for the batch.
+
+            **y**: *np.ndarray*
+            True one-hot encoded labels for the batch.
+            
+        ## Returns:
+            **tuple**: *(np.ndarray, np.ndarray, np.ndarray).*
+            np.ndarray: Gradient w.r.t. weights.
+            np.ndarray: Gradient w.r.t. bias.
+            np.ndarray: Calculated linear combination.
+            
+        ## Raises:
+            **None**
+        """
+        if not issparse(X):
+            # Ensure at least 2D for dense matrices
+            X = np.atleast_2d(X)
+        
+        # Linear combination of inputs and weights
+        z = X @ self.weights
+
+        if self.intercept:
+            # Add bias term
+            z += self.b
+        
+        # Compute softmax probabilities
+        y_pred_proba = forlinear.softmax(z)
+        
+        # Prediction error (residuals)
+        error = y_pred_proba - y
+
+        # MSE loss gradient
+        if self.loss == 'mse':
+            grad_w, grad_b = forlinear.mse_deriv(X, error, self.intercept)
+        
+        # RMSE loss gradient
+        elif self.loss == 'rmse':
+           grad_w, grad_b = forlinear.rmse_deriv(X, error, self.intercept)
+        
+        # MAE loss gradient
+        elif self.loss == 'mae':
+           grad_w, grad_b = forlinear.mae_deriv(X, error, self.intercept)
+
+        # Smooth L1 loss gradient
+        elif self.loss == 'smoothl1':
+           grad_w, grad_b = forlinear.smoothl1_deriv(X, error, self.intercept, self.delta)
+
+        # L1 regularization gradient
+        if self.penalty == 'l1':
+            grad_w += forlinear.lasso_deriv(self.weights, self.alpha)
+
+        # L2 regularization gradient
+        elif self.penalty == 'l2':
+            grad_w += forlinear.ridge_deriv(self.weights, self.alpha)
+        
+        # Elastic Net regularization
+        elif self.penalty == 'elasticnet':
+            grad_w += forlinear.elasticnet_deriv(self.weights, self.alpha)
+
+        # Return gradients for weights and bias
+        return grad_w, grad_b, z
+
+    def predict_proba(self, X_test: np.ndarray | spmatrix) -> np.ndarray:
+        """
+        Predict class probabilities using the trained model.
+
+        ## Args:
+            **X_test**: *np.ndarray* or *spmatrix*
+            Input features for prediction.
+
+        ## Returns: 
+            **np.ndarray**: *Predicted class probabilities.*
+
+        ## Raises:
+            **ValueError**: *If model is not trained.*
+        """
+        if not issparse(X_test):
+            if X_test.ndim == 1:
+                # Reshape 1D to 2D
+                X_processed = X_test.reshape(-1, 1)
+                # Convert to float64 numpy array
+            X_processed = np.asarray(X_test, dtype=np.float64)
+
+        else:
+            # Keep sparse matrix as is
+            X_processed = X_test
+
+        if self.n_classes == 0:
+            raise ValueError("Model not trained. Call fit() first.")
+        
+        # Linear combination
+        z = X_processed @ self.weights
+        if self.intercept:
+            # Add bias if intercept is used
+            z += self.b
+        
+        # Return softmax probabilities
+        return forlinear.softmax(z)
+
+    # ========= MAIN METHODS =========
+    def fit(self, X_train: np.ndarray | spmatrix, y_train: np.ndarray | spmatrix) -> None:
+        """
+        Fit the model to the training data using mini-batch gradient descent.
+        Supports learning rate schedules, and early stopping.
+        
+        ## Args:
+            **X_train**: *np.ndarray or spmatrix*
+            Training input features.
+
+            **y_train**: *np.ndarray or spmatrix*
+            Training target values.
+            
+        ## Returns:
+            **None**
+            
+        ## Raises:
+            **ValueError**: *If input data contains NaN/Inf, dimensions mismatch, or < 2 classes.*
+        """
+        # ========== DATA PREPROCESSING ==========
+        # Check if input is sparse matrix
+        if not issparse(X_train):
+            # If 1D array, reshape to 2D
+            if X_train.ndim == 1:
+                # Reshape for single feature
+                X_train = X_train.reshape(-1, 1)
+
+            # Convert to float64 numpy array
+            X_processed = np.asarray(X_train, dtype=np.float64)
+        
+        # Keep sparse matrix as is (CSR or CSC)
+        else:
+            if X_train.shape[0] > X_train.shape[1]:
+              X_processed = X_train.tocsr()
+
+            else:
+              X_processed = X_train.tocsc()
+        
+        # Convert y to 1D float64 array
+        y_processed = np.asarray(y_train, dtype=np.float64).ravel()
+
+        # ========== DATA VALIDATION ==========
+        # Check sparse data for NaN/Inf
+        if issparse(X_processed):
+            # Ensure all sparse data is finite
+            if not np.all(np.isfinite(X_processed.data)):
+                raise ValueError("Input features (X_train) contain NaN or Infinity values.")
+        # Check dense data for NaN/Inf
+        else:
+            # Ensure all dense data is finite
+            if not np.all(np.isfinite(X_processed)):
+                raise ValueError("Input features (X_train) contain NaN or Infinity values.")
+        
+        # Check y for NaN/Inf
+        if not np.all(np.isfinite(y_processed)):
+            raise ValueError("Input target (y_train) contains NaN or Infinity values.")
+        
+        # Check sample count match
+        if X_processed.shape[0] != y_processed.shape[0]:
+            raise ValueError(f"X_train ({X_processed.shape[0]}) and y_train ({y_processed.shape[0]}) sample mismatch.")
+        
+        # Get data dimention
+        num_samples, num_features = X_processed.shape
+        # Extract unique class labels
+        self.classes = np.unique(y_processed)
+        # Number of classes
+        self.n_classes = len(self.classes)
+        # Initialize loss history list
+        self.loss_history = []
+        
+        # Ensure at least 2 classes
+        if self.n_classes < 2:
+            raise ValueError("Class label must have at least 2 types.")
+        
+        # Initialize weights if needed
+        if self.weights is None or self.weights.shape != (num_features, self.n_classes):
+            # Zero initialization for weights
+            self.weights = np.zeros((num_features, self.n_classes), dtype=np.float64)
+        
+        # Initialize bias if needed
+        if self.intercept and (self.b is None or self.b.shape != (self.n_classes,)):
+            # Zero initialization for bias
+            self.b = np.zeros(self.n_classes, dtype=np.float64)
+        
+        # Data label one-hot transforms
+        y_one_hot = one_hot_labeling(y_processed, self.classes)
+        
+        # Random number generator for shuffling
+        rng = np.random.default_rng(self.random_state)
+        # Calculate number of batches
+        num_batches = int(np.ceil(num_samples / self.batch_size))
+        # Initialize current learning rate
+        self.current_lr = self.learning_rate
+        # Initialize wait counter for early stopping
+        self.wait = 0
+        
+        # ========== TRAINING LOOP ==========
+        for i in range(self.max_iter):
+            # ========== LEARNING RATE SCHEDULING ==========
+            # Apply LR scheduler after warm-up iterations
+            if i > self.stoic_iter:
+                # Constant learning rate scheduler
+                if self.lr_scheduler == 'constant':
+                    # Keep learning rate constant
+                    self.current_lr = self.learning_rate
+                
+                # Invscaling learning rate scheduler
+                elif self.lr_scheduler == 'invscaling':
+                    # Inverse scaling decay
+                    self.current_lr = self.learning_rate / ((i + 1)**self.power_t + self.epsilon)
+                 
+                # Pleateau learning rate scheduler
+                elif self.lr_scheduler == 'plateau':
+                    # Compute full dataset loss
+                    current_loss = self._calculate_loss(y_one_hot, self.predict_proba(X_processed))
+                    if current_loss < self.best_loss - self.epsilon:
+                        # Update best losss
+                        self.best_loss = current_loss
+                        # Reset wait counter
+                        self.wait = 0
+                    elif abs(current_loss - self.best_loss) < self.tol:
+                        # Increment wait counter
+                        self.wait += 1
+                    else:
+                        # Reset wait counter
+                        self.wait = 0
+
+                    if self.wait >= self.patience:
+                        # Reduce learning rates
+                        self.current_lr *= self.factor
+                        # Reset wait counter
+                        self.wait = 0
+                        if self.verbose == 1:
+                            print(f"|=-Epoch {i + 1} reducing learning rate to {self.current_lr:.6f}-=|")
+
+            # ========== DATA SHUFFLING ==========
+            if self.shuffle:
+                # Generate random permutation indices
+                indices = rng.permutation(num_samples)
+                # Shuffle X
+                X_shuffled = X_processed[indices] if not issparse(X_processed) else X_processed[indices]
+                # Shuffle y
+                y_shuffled = y_one_hot[indices]
+
+            # No shuffling
+            else:
+                X_shuffled = X_processed
+                y_shuffled = y_one_hot
+
+            # ========== BATCH PROCESSING ==========
+            epoch_loss_sum = 0.0
+            for j in range(num_batches):
+                # Start index for current batch
+                s_idx = j * self.batch_size
+                # End index for current batch
+                e_idx = min((j + 1) * self.batch_size, num_samples)
+                # Extract batch features
+                X_batch = X_shuffled[s_idx:e_idx]
+                # Extract batch labels
+                y_batch = y_shuffled[s_idx:e_idx]
+                # Compute gradients for batch
+                grad_w, grad_b, z_batch = self._calculate_grad(X_batch, y_batch)
+
+                # ========== PARAMETER UPDATES ==========
+                # Update weights using MBGD
+                self.weights -= self.current_lr * grad_w
+                if self.intercept:
+                    # Update bias using MBGD
+                    self.b -= self.current_lr * grad_b
+
+                # ========== BATCH LOSS COMPUTATION ==========
+                # Compute softmax probabilities
+                y_proba_batch = forlinear.softmax(z_batch)
+                # Accumulate batch loss
+                epoch_loss_sum += self._calculate_loss(y_batch, y_proba_batch)
+
+            # ========== EPOCH LOSS AND LOGGING ==========
+            # Average loss over all batches
+            avg_epoch_loss = epoch_loss_sum / num_batches
+            # Store epoch losss
+            self.loss_history.append(avg_epoch_loss)
+            # Level 1 verbose logging
+            if self.verbose == 1 and ((i % max(1, self.max_iter // 20)) == 0 or i < 5):
+                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {avg_epoch_loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {np.mean(self.b):.6f}, Learning Rate: {self.current_lr:.6f}")
+
+            # Level 2 verbose logging
+            elif self.verbose == 2:
+                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {avg_epoch_loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {np.mean(self.b):.6f}, Learning Rate: {self.current_lr:.6f}")
+
+            # ========== EARLY STOPPING ==========
+            if self.early_stop and i > self.stoic_iter:
+                if (np.abs(self.loss_history[-1]) - np.abs(self.loss_history[-2])) < self.tol:
+                    break 
+
+    def predict(self, X_test: np.ndarray | spmatrix) -> np.ndarray:
+        """
+        Predict class labels using the trained model.
+
+        ## Args:
+            **X_test**: *np.ndarray* or *spmatrix*
+            Input features for prediction.
+
+        ## Returns:
+            **np.ndarray**: *Predicted class labels.*
+
+        ## Raises:
+            **ValueError**: *If model is not trained (propagated from predict_proba).*
+        """
+        # Get predicted probabilities
+        probas = self.predict_proba(X_test)
+        # Choose class with highest probability
+        pred_class = np.argmax(probas, axis=1)
+
+        if self.classes is not None and len(self.classes) == self.n_classes:
+            # Map indices to original classes
+            pred_class = np.array([self.classes[idx] for idx in pred_class])
+
+        return pred_class
+    
+    def score(self, X_test: np.ndarray | spmatrix, y_test: np.ndarray) -> float:
+        """
+        Calculate the mean accuracy on the given test data and labels.
+
+        ## Args:
+            **X_test**: *np.ndarray* or *spmatrix*
+            Feature matrix.
+
+            **y_test**: *np.ndarray*
+            True target labels.
+
+        ## Returns:
+            **float**: *Mean accuracy score.*
+
+        ## Raises:
+            **None**
+        """
+        # ========== PREDICTION ==========
+        y_pred = self.predict(X_test)
+        # Compare prediction with true labels and compute mean
+        return np.mean(y_pred == y_test)

@@ -3,7 +3,7 @@ import numpy as np                                # Numpy for numerical computat
 from typing import Optional, Literal              # More specific type hints
 from scipy.sparse import spmatrix, issparse       # For sparse matrix handling
 from nexgml.tree_models.tree_backend.TBClassifier import TreeBackendClassifier  # Estimator model
-from nexgml.helper.indexing import Indexing       # For indexing utilities
+from nexgml.indexing import standard_indexing     # For indexing utilities
 
 # ========== THE MODEL ==========
 class ForestBackendClassifier:
@@ -150,8 +150,8 @@ class ForestBackendClassifier:
 
         # ---------- Feature/Sample size setup ----------
         # Determine how many features/samples each tree should use
-        self.max_features = Indexing.standard_indexing(n_features, self.max_features)
-        self.max_samples = Indexing.standard_indexing(n_samples, self.max_samples)
+        self.max_features = standard_indexing(n_features, self.max_features)
+        self.max_samples = standard_indexing(n_samples, self.max_samples)
 
         # ---------- Train each tree ----------
         for i in range(self.n_estimators):
@@ -302,3 +302,25 @@ class ForestBackendClassifier:
                 probabilities[sample_idx, class_to_idx[cls]] = count / self.n_estimators
 
         return probabilities
+    
+    def score(self, X_test: np.ndarray | spmatrix, y_test: np.ndarray) -> float:
+        """
+        Calculate the mean accuracy on the given test data and labels.
+
+        ## Args:
+            **X_test**: *np.ndarray* or *spmatrix*
+            Feature matrix.
+
+            **y_test**: *np.ndarray*
+            True target labels.
+
+        ## Returns:
+            **float**: *Mean accuracy score.*
+
+        ## Raises:
+            **None**
+        """
+        # ========== PREDICTION ==========
+        y_pred = self.predict(X_test)
+        # Compare prediction with true labels and compute mean
+        return np.mean(y_pred == y_test)

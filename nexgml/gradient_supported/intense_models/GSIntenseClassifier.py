@@ -1,9 +1,9 @@
 # ========== LIBRARIES ==========
-import numpy as np                           # For numerical operations
-from scipy.sparse import issparse, spmatrix  # For sparse matrix support
-from typing import Literal, Optional         # More specific type hints
-from nexgml.helper.amo import AMO            # For some math operation
-from nexgml.helper.indexing import Indexing  # For one-hot labeling
+import numpy as np                             # For numerical operations
+from scipy.sparse import issparse, spmatrix    # For sparse matrix support
+from typing import Literal, Optional           # More specific type hints
+from nexgml.amo import forlinear               # For specific numerical operations
+from nexgml.indexing import one_hot_labeling   # For one-hot labeling
 
 # ========== THE MODEL ==========
 class IntenseClassifier:
@@ -18,7 +18,7 @@ class IntenseClassifier:
         max_iter: int=1000, 
         learning_rate: float=0.01,
         penalty: Optional[Literal["l1", "l2", "elasticnet"]] | None="l2", 
-        alpha: float=0.001, 
+        alpha: float=0.0001, 
         l1_ratio: float=0.5, 
         fit_intercept: bool=True, 
         tol: float=0.0001, 
@@ -29,7 +29,7 @@ class IntenseClassifier:
         lr_scheduler: Literal["constant", "invscaling", 'plateau'] | None='invscaling', 
         optimizer: Literal['mbgd', 'adam', 'adamw'] | None='mbgd', 
         batch_size: int=16, 
-        power_t: float=0.5, 
+        power_t: float=0.25, 
         patience: int=5, 
         factor: float=0.5, 
         stoic_iter: int | None = 10
@@ -47,7 +47,7 @@ class IntenseClassifier:
             **penalty**: *{'l1', 'l2', 'elasticnet'} or None, default='l2'*
             Type of regularization ('l1', 'l2', 'elasticnet') or None.
 
-            **alpha**: *float, default=0.001*
+            **alpha**: *float, default=0.0001*
             Regularization strength (used if penalty is not None).
 
             **l1_ratio**: *float, default=0.5*
@@ -80,7 +80,7 @@ class IntenseClassifier:
             **batch_size**: *int, default=16*
             Number of samples per mini-batch when using mini-batch gradient descent (MBGD, Adam, AdamW).
             
-            **power_t**: *float, default=0.5*
+            **power_t**: *float, default=0.25*
             The exponent for inverse scaling learning rate schedule (used if lr_scheduler='invscaling').
 
             **patience**: *int, default=5*
@@ -153,7 +153,7 @@ class IntenseClassifier:
             self.beta2 = 0.999                         # Exponential decay rate for second moment estimates
 
     # ========= HELPER METHODS =========
-    def _calculate_loss(self, y_true, y_pred_proba):
+    def _calculate_loss(self, y_true: np.ndarray, y_pred_proba: np.ndarray) -> float: 
         """
         Compute categorical cross-entropy loss with regularization.
 
@@ -175,75 +175,70 @@ class IntenseClassifier:
             **None**
         """
 
-        loss = AMO.categorical_ce(y_true, y_pred_proba, mean=True)
-        penalty = 0
-        # Initialize regularization term
-        if self.penalty == "l1":
-            penalty = self.alpha * np.sum(np.abs(self.weights))
-            # L1 regularization
-        elif self.penalty == "l2" and self.optimizer != 'adamw':
-            penalty = self.alpha * np.sum(self.weights ** 2)
-            # L2 regularization
-        elif self.penalty == "l2" and self.optimizer == 'adamw':
-            penalty = 0
-            # AdamW applies weight decay during the update step
-        elif self.penalty == 'elasticnet':
-            l1 = self.l1_ratio * np.sum(np.abs(self.weights))
-            # L1 part
-            l2 = (1 - self.l1_ratio) * np.sum(self.weights**2)
-            # L2 part
-            penalty = self.alpha * (l1 + l2)
-            # Elastic Net
-        return loss + penalty
-        # Total loss
+        loss = forlinear.categorical_ce(y_true, y_pred_proba, mean=True)
 
-    def _calculate_grad(self, X_scaled: np.ndarray | spmatrix, y_true: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        # L1 regularization
+        if self.penalty == "l1":
+            loss += forlinear.lasso(self.weights, self.alpha)
+
+        # L2 regularization
+        elif self.penalty == "l2" and self.optimizer != 'adamw':
+            loss += forlinear.ridge(self.weights, self.alpha)
+        
+        # Elastic Net
+        elif self.penalty == 'elasticnet':
+            loss += forlinear.elasticnet(self.weights, self.alpha, self.l1_ratio)
+
+        return loss
+
+    def _calculate_grad(self, X: np.ndarray | spmatrix, y: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Compute gradients of the categorical cross-entropy loss with respect to weights and bias.
 
         Supports both dense and sparse matrices for efficient computation.
-        Note: Regularization gradients are NOT computed here; they are applied
-        during the optimizer update step (e.g., L2 in AdamW or handled by the loss function).
 
         ## Args:
-            **X_scaled**: *np.ndarray or spmatrix*
+            **X**: *np.ndarray or spmatrix*
             Input features for the batch.
 
-            **y_true**: *np.ndarray*
+            **y**: *np.ndarray*
             True one-hot encoded labels for the batch.
             
         ## Returns:
-            **tuple**: *(grad_w, grad_b)*
-            grad_w: Gradient w.r.t. weights
-            grad_b: Gradient w.r.t. bias
+            **tuple**: *(np.ndarray, np.ndarray, np.ndarray).*
+            np.ndarray: Gradient w.r.t. weights.
+            np.ndarray: Gradient w.r.t. bias.
+            np.ndarray: Calculated linear combination.
             
         ## Raises:
             **None**
         """
-        if not issparse(X_scaled):
-            X_scaled = np.atleast_2d(X_scaled)
+        if not issparse(X):
+            X = np.atleast_2d(X)
             # Ensure at least 2D for dense matrices
-        z = X_scaled @ self.weights
+        z = X @ self.weights
         # Linear combination of inputs and weights
         if self.intercept:
             z += self.b
             # Add bias term
-        y_pred_proba = AMO.softmax(z)
+        y_pred_proba = forlinear.softmax(z)
         # Compute softmax probabilities
-        error = y_pred_proba - y_true
+        error = y_pred_proba - y
         # Prediction error (residuals)
-        if issparse(X_scaled):
-            # Sparse matrix gradient computation
-            grad_w = (X_scaled.T @ error) / X_scaled.shape[0]
-            # Weight gradient using sparse matrix multiplication
-        else:
-            # Dense matrix gradient computation
-            grad_w = np.dot(X_scaled.T, error) / X_scaled.shape[0]
-            # Weight gradient using dense dot product
-        grad_b = np.mean(error, axis=0) if self.intercept else np.zeros(self.n_classes)
+        grad_w, grad_b = forlinear.cce_deriv(X, error, self.intercept, self.n_classes)
         # Bias gradient (mean error per class)
-        return grad_w, grad_b
+
+        if self.penalty == 'l1':
+            grad_w += forlinear.lasso_deriv(self.weights, self.alpha)
+
+        elif self.penalty == 'l2':
+            grad_w += forlinear.ridge_deriv(self.weights, self.alpha)
+
+        elif self.penalty == 'elasticnet':
+            grad_w += forlinear.elasticnet_deriv(self.weights, self.alpha, self.l1_ratio)
+        
         # Return gradients for weights and bias
+        return grad_w, grad_b, z
 
     def predict_proba(self, X_test: np.ndarray | spmatrix) -> np.ndarray:
         """
@@ -277,7 +272,7 @@ class IntenseClassifier:
         if self.intercept:
             z += self.b
             # Add bias if intercept is used
-        return AMO.softmax(z)
+        return forlinear.softmax(z)
         # Return softmax probabilities
 
     # ========= MAIN METHODS =========
@@ -364,7 +359,7 @@ class IntenseClassifier:
             self.b = np.zeros(self.n_classes, dtype=np.float64)
             # Zero initialization for bias
 
-        y_one_hot = Indexing.one_hot_labeling(y_processed, self.classes)
+        y_one_hot = one_hot_labeling(y_processed, self.classes)
         # Data label one-hot transform
 
         if self.optimizer in {'adam', 'adamw'}:
@@ -449,7 +444,7 @@ class IntenseClassifier:
                 # Extract batch features
                 y_batch = y_shuffled[s_idx:e_idx]
                 # Extract batch labels
-                grad_w, grad_b = self._calculate_grad(X_batch, y_batch)
+                grad_w, grad_b, z_batch = self._calculate_grad(X_batch, y_batch)
                 # Compute gradients for batch
 
                 # ========== PARAMETER UPDATES ==========
@@ -518,27 +513,27 @@ class IntenseClassifier:
                     raise ValueError(f"Optimizer '{self.optimizer}' not supported.")
 
                 # ========== BATCH LOSS COMPUTATION ==========
-                z_batch = X_batch @ self.weights
-                # Linear combination for batch
-                if self.intercept:
-                    z_batch += self.b
-                    # Add bias
-                y_proba_batch = AMO.softmax(z_batch)
+                y_proba_batch = forlinear.softmax(z_batch)
                 # Compute softmax probabilities
                 epoch_loss_sum += self._calculate_loss(y_batch, y_proba_batch)
                 # Accumulate batch loss
 
             # ========== EPOCH LOSS AND LOGGING ==========
-            avg_epoch_loss = epoch_loss_sum / num_batches
             # Average loss over all batches
-            self.loss_history.append(avg_epoch_loss)
+            avg_epoch_loss = epoch_loss_sum / num_batches
             # Store epoch loss
-            if self.verbose == 1:
-                print(f"|=Epoch {i+1}/{self.max_iter} - Loss: {avg_epoch_loss:.6f}=|")
+            self.loss_history.append(avg_epoch_loss)
+            # Level 1 verbose logging
+            if self.verbose == 1 and ((i % max(1, self.max_iter // 20)) == 0 or i < 5):
+                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {avg_epoch_loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {np.mean(self.b):.6f}, Learning Rate: {self.current_lr:.6f}")
+
+            # Level 2 verbose logging
+            elif self.verbose == 2:
+                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {avg_epoch_loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {np.mean(self.b):.6f}, Learning Rate: {self.current_lr:.6f}")
 
             # ========== EARLY STOPPING ==========
             if self.early_stop and i > self.stoic_iter:
-                if (np.abs(self.loss_history[-1]) - np.abs(self.loss_history[-2])) < self.tol:
+                if abs(self.loss_history[-1] - self.loss_history[-2]) < self.tol:
                     break 
 
     def predict(self, X_test: np.ndarray | spmatrix) -> np.ndarray:
@@ -564,3 +559,25 @@ class IntenseClassifier:
             pred_class = np.array([self.classes[idx] for idx in pred_class])
             # Map indices to original classes
         return pred_class
+    
+    def score(self, X_test: np.ndarray | spmatrix, y_test: np.ndarray) -> float:
+        """
+        Calculate the mean accuracy on the given test data and labels.
+
+        ## Args:
+            **X_test**: *np.ndarray* or *spmatrix*
+            Feature matrix.
+
+            **y_test**: *np.ndarray*
+            True target labels.
+
+        ## Returns:
+            **float**: *Mean accuracy score.*
+
+        ## Raises:
+            **None**
+        """
+        # ========== PREDICTION ==========
+        y_pred = self.predict(X_test)
+        # Compare prediction with true labels and compute mean
+        return np.mean(y_pred == y_test)

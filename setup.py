@@ -30,7 +30,6 @@ setup(
     install_requires=[
         "numpy>=1.23",
         "scipy>=1.10",
-        "numba>=0.56",
     ],
     extras_require={
         "dev": [

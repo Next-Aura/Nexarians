@@ -1,9 +1,9 @@
 # ========== LIBRARIES ==========
-import numpy as np                           # Numpy for numerical computations
-from typing import Literal, Optional         # More specific type hints
-from scipy.sparse import issparse, spmatrix  # For sparse matrix handling
-from nexgml.helper.indexing import Indexing  # For indexing utilities
-from nexgml.helper.amo import ForTree        # For some math operations
+import numpy as np                            # Numpy for numerical computations
+from typing import Literal, Optional          # More specific type hints
+from scipy.sparse import issparse, spmatrix   # For sparse matrix handling
+from nexgml.indexing import standard_indexing # For indexing utilities
+from nexgml.amo.fortree import gini_impurity, entropy_impurity, log_loss_impurity # For some math operations
 
 # ========== THE MODEL ==========
 class TreeBackendClassifier:
@@ -200,16 +200,16 @@ class TreeBackendClassifier:
 
             # Calculate impurity based on criterion
             if self.criterion == 'gini':
-                left_impurity = ForTree.gini_impurity(left_labels)
-                right_impurity = ForTree.gini_impurity(right_labels)
+                left_impurity = gini_impurity(left_labels)
+                right_impurity = gini_impurity(right_labels)
 
             elif self.criterion == 'entropy':
-                left_impurity = ForTree.entropy_impurity(left_labels)
-                right_impurity = ForTree.entropy_impurity(right_labels)
+                left_impurity = entropy_impurity(left_labels)
+                right_impurity = entropy_impurity(right_labels)
 
             elif self.criterion == 'log_loss':
-                left_impurity = ForTree.log_loss_impurity(left_labels)
-                right_impurity = ForTree.log_loss_impurity(right_labels)
+                left_impurity = log_loss_impurity(left_labels)
+                right_impurity = log_loss_impurity(right_labels)
 
             # Calculate weighted impurity
             weighted_impurity = (len(left_labels) / len(y)) * left_impurity + \
@@ -217,11 +217,11 @@ class TreeBackendClassifier:
 
             # Get current impurity
             if self.criterion == 'gini':
-                current_impurity = ForTree.gini_impurity(y)
+                current_impurity = gini_impurity(y)
             elif self.criterion == 'entropy':
-                current_impurity = ForTree.entropy_impurity(y)
+                current_impurity = entropy_impurity(y)
             elif self.criterion == 'log_loss':
-                current_impurity = ForTree.log_loss_impurity(y)
+                current_impurity = log_loss_impurity(y)
 
             # Check if split improves impurity and meets decrease threshold
             if weighted_impurity < best_impurity and (current_impurity - weighted_impurity) >= self.min_impurity_decrease:
@@ -258,7 +258,7 @@ class TreeBackendClassifier:
         # Get number of features
         n_features = X.shape[1]
         # Get max features index
-        self.max_features = Indexing.standard_indexing(n_features, self.max_features)
+        self.max_features = standard_indexing(n_features, self.max_features)
 
         # Select subset of features if max_features is set
         if self.max_features < n_features:
@@ -349,12 +349,15 @@ class TreeBackendClassifier:
         # ---------- Sampling (if max_samples is set) ----------
         if depth == 0 and self.max_samples is not None:
             # Get number of samples to use
-            n_samples = Indexing.standard_indexing(y.size, self.max_samples)
+            n_samples = standard_indexing(y.size, self.max_samples)
             # Subsample if n_samples is less than total
             if n_samples < y.size:
                 indices = np.random.choice(y.size, n_samples, replace=False)
                 X = X[indices]
                 y = y[indices]
+
+        if depth == 0:
+            self.tree = {"value": float(np.mean(y))}
             
         # ---------- Stopping conditions (Leaf Node) ----------
         # If pure node (all labels are the same)
@@ -486,15 +489,15 @@ class TreeBackendClassifier:
             predictions.append(self._predict_single(x))
         return np.array(predictions)
 
-    def score(self, X: np.ndarray | spmatrix, y: np.ndarray) -> float:
+    def score(self, X_test: np.ndarray | spmatrix, y_test: np.ndarray) -> float:
         """
         Calculate the mean accuracy on the given test data and labels.
 
         ## Args:
-            **X**: *np.ndarray* or *spmatrix*
+            **X_test**: *np.ndarray* or *spmatrix*
             Feature matrix.
 
-            **y**: *np.ndarray*
+            **y_test**: *np.ndarray*
             True target labels.
 
         ## Returns:
@@ -504,6 +507,6 @@ class TreeBackendClassifier:
             **None**
         """
         # ========== PREDICTION ==========
-        y_pred = self.predict(X)
+        y_pred = self.predict(X_test)
         # Compare prediction with true labels and compute mean
-        return np.mean(y_pred == y)
+        return np.mean(y_pred == y_test)

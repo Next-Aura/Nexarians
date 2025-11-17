@@ -3,7 +3,7 @@ import numpy as np                               # Numpy for numerical computati
 from typing import Optional, Literal             # More specific type hints
 from scipy.sparse import spmatrix, issparse      # For sparse matrix handling
 from nexgml.tree_models.tree_backend.TBRegressor import TreeBackendRegressor  # Estimator model
-from nexgml.helper.indexing import Indexing      # For indexing utilities
+from nexgml.indexing import standard_indexing    # For indexing utilities
 
 # ========== THE MODEL ==========
 class ForestBackendRegressor:
@@ -149,8 +149,8 @@ class ForestBackendRegressor:
 
         # ---------- Feature/Sample size setup ----------
         # Determine how many features/samples each tree should use
-        self.max_features = Indexing.standard_indexing(n_features, self.max_features)
-        self.max_samples = Indexing.standard_indexing(n_samples, self.max_samples)
+        self.max_features = standard_indexing(n_features, self.max_features)
+        self.max_samples = standard_indexing(n_samples, self.max_samples)
 
         # ---------- Train each tree ----------
         for i in range(self.n_estimators):
@@ -240,3 +240,26 @@ class ForestBackendRegressor:
         final_predictions = np.mean(all_predictions, axis=1)
 
         return final_predictions
+    
+    def score(self, X_test: np.ndarray | spmatrix, y_test: np.ndarray) -> float:
+        """
+        Calculate the coefficient of determination R^2 of the prediction.
+
+        ## Args:
+            **X_test**: *np.ndarray* or *spmatrix*
+            Feature matrix.
+
+            **y_test**: *np.ndarray*
+            True target values.
+
+        ## Returns:
+            **float**: *R^2 score.*
+
+        ## Raises:
+            **None**
+        """
+        # ========== PREDICTION ==========
+        y_pred = self.predict(X_test)
+        u = ((y_test - y_pred) ** 2).sum()
+        v = ((y_test - y_test.mean()) ** 2).sum()
+        return 1 - u / v if v != 0 else 0.0
