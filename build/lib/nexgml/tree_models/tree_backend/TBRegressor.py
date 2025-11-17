@@ -1,9 +1,9 @@
 # ========== LIBRARIES ==========
-import numpy as np                           # Numpy for numerical computations
-from typing import Literal, Optional         # More specific type hints
-from scipy.sparse import issparse, spmatrix  # For sparse matrix handling
-from nexgml.helper.indexing import Indexing  # For indexing utilities
-from nexgml.helper.amo import ForTree        # For some math operations
+import numpy as np                            # Numpy for numerical computations
+from typing import Literal, Optional          # More specific type hints
+from scipy.sparse import issparse, spmatrix   # For sparse matrix handling
+from nexgml.indexing import standard_indexing # For indexing utilities
+from nexgml.amo.fortree import squared_error, absolute_error, friedman_squared_error, poisson_deviance # For some math operations
 
 # ========== THE MODEL ==========
 class TreeBackendRegressor:
@@ -108,19 +108,19 @@ class TreeBackendRegressor:
         """
         # Compute varinace with squared error
         if self.criterion == 'squared_error':
-            return ForTree.squared_error(y)
+            return squared_error(y)
         
         # Compute varinace with friedman MSE
         elif self.criterion == 'friedman_mse':
-            return ForTree.friedman_squared_error(y)
+            return friedman_squared_error(y)
         
         # Compute varinace with absolute error
         elif self.criterion == 'absolute_error':
-            return ForTree.absolute_error(y)
+            return absolute_error(y)
         
         # Compute varinace with poisson deviance
         elif self.criterion == 'poisson':
-            return ForTree.poisson_deviance(y)
+            return poisson_deviance(y)
 
     def criterion_score(self, y: np.ndarray, left_y: np.ndarray, right_y: np.ndarray) -> float:
         """
@@ -279,7 +279,7 @@ class TreeBackendRegressor:
         # Get X column shape
         n_features = X.shape[1]
         # Get max features slicing index
-        self.max_features = Indexing.standard_indexing(n_features, self.max_features)
+        self.max_features = standard_indexing(n_features, self.max_features)
         # Feature slicing
         features = np.random.choice(n_features, self.max_features, replace=False)
         
@@ -361,7 +361,7 @@ class TreeBackendRegressor:
         # ---------- Sampling (if max_samples is set) ----------
         if depth == 0 and self.max_samples is not None:
             # Get slicing indexing for samples
-            n_samples = Indexing.standard_indexing(y.size, self.max_samples)
+            n_samples = standard_indexing(y.size, self.max_samples)
             # Slice the data if slicing index is not more than y array size
             if n_samples < y.size:
                 indices = np.random.choice(y.size, n_samples, replace=False)
@@ -369,6 +369,9 @@ class TreeBackendRegressor:
                 X = X[indices]
                 # Slice y data
                 y = y[indices]
+
+        if depth == 0:
+            self.tree = {"value": float(np.mean(y))}
 
         # Stopping conditions (Leaf Node)
         if depth >= self.max_depth or y.size <= self.min_samples_leaf or y.size < self.min_samples_split:
@@ -501,15 +504,15 @@ class TreeBackendRegressor:
             predictions.append(self._predict_single(x))
         return np.array(predictions, dtype=float)
 
-    def score(self, X: np.ndarray | spmatrix, y: np.ndarray) -> float:
+    def score(self, X_test: np.ndarray | spmatrix, y_test: np.ndarray) -> float:
         """
         Calculate the coefficient of determination R^2 of the prediction.
 
         ## Args:
-            **X**: *np.ndarray* or *spmatrix*
+            **X_test**: *np.ndarray* or *spmatrix*
             Feature matrix.
 
-            **y**: *np.ndarray*
+            **y_test**: *np.ndarray*
             True target values.
 
         ## Returns:
@@ -519,7 +522,7 @@ class TreeBackendRegressor:
             **None**
         """
         # ========== PREDICTION ==========
-        y_pred = self.predict(X)
-        u = ((y - y_pred) ** 2).sum()
-        v = ((y - y.mean()) ** 2).sum()
+        y_pred = self.predict(X_test)
+        u = ((y_test - y_pred) ** 2).sum()
+        v = ((y_test - y_test.mean()) ** 2).sum()
         return 1 - u / v if v != 0 else 0.0

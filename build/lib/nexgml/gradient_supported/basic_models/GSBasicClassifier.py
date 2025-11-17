@@ -1,9 +1,9 @@
 # ========== LIBRARIES ==========
-import numpy as np                           # Numpy for numerical computations
-from scipy.sparse import issparse, spmatrix  # For sparse matrix handling
-from typing import Literal, Optional         # More specific type hints
-from nexgml.helper.amo import AMO            # For some math operation
-from nexgml.helper.indexing import Indexing  # For indexing utilities
+import numpy as np                             # Numpy for numerical computations
+from scipy.sparse import issparse, spmatrix    # For sparse matrix handling
+from typing import Literal, Optional           # More specific type hints
+from nexgml.amo import forlinear               # For specific numerical computations
+from nexgml.indexing import integer_labeling, one_hot_labeling  # For indexing utilities
 
 # ========== THE MODEL ==========
 class BasicClassifier:
@@ -26,9 +26,14 @@ class BasicClassifier:
             random_state: int | None=None,
             early_stopping: bool | None=True,
             verbose: int=0,
+            lr_scheduler: Literal["constant", "invscaling", 'plateau'] | None='invscaling',
+            power_t: float=0.25,
+            patience: int=5,
+            factor: float=0.5,
+            stoic_iter: int | None = 10
             ):
         """
-        Initialize the SoftBasicClassifier model.
+        Initialize the BasicClassifier model.
 
         ## Args:
             **max_iter**: *int, default=1000*
@@ -64,15 +69,33 @@ class BasicClassifier:
             **verbose**: *int, default=0*
             If 1, print training progress (epoch, loss, etc.).
 
+            **lr_scheduler**: *{'constant', 'invscaling', 'plateau'} or None, default='invscaling'*
+            Strategy for learning rate adjustment over iterations.
+
+            **power_t**: *float, default=0.25*
+            The exponent for inverse scaling learning rate schedule (used if lr_scheduler='invscaling').
+
+            **patience**: *int, default=5*
+            Number of epochs to wait for loss improvement before reducing learning rate (used if lr_scheduler='plateau').
+
+            **factor**: *float, default=0.5*
+            Factor by which the learning rate will be reduced (used if lr_scheduler='plateau').
+            
+            **stoic_iter**: *int or None, default=10*
+            Number of initial epochs to skip before checking for convergence/tolerance in early stopping.
+
         ## Returns:
             **None**
 
         ## Raises:
-            **ValueError**: *If invalid penalty type is provided.*
+            **ValueError**: *If invalid penalty or lr scheduler type is provided.*
         """
         # ========== PARAMETER VALIDATION ==========
         if penalty not in (None, "l1", "l2", "elasticnet"):
-            raise ValueError(f"Invalid penalty argument {penalty}.")
+            raise ValueError(f"Invalid penalty argument, {penalty}.")
+        
+        if lr_scheduler not in {'invscaling', 'constant', 'plateau'}:
+            raise ValueError(f"Invalid lr_scheduler argument {lr_scheduler}. Choose from 'invscaling', 'constant', or 'plateau'.")
 
         # ========== HYPERPARAMETERS ==========
         self.max_iter = int(max_iter)              # Model max training iterations
@@ -86,11 +109,19 @@ class BasicClassifier:
         self.shuffle = bool(shuffle)               # Data shuffling
         self.random_state = random_state           # For reproducibility
         self.early_stop = bool(early_stopping)     # Early stopping flag
+        self.lr_scheduler = lr_scheduler           # Learning rate scheduler type ('invscaling', 'constant', 'plateau')
+        self.power_t = float(power_t)              # Power parameter for inverse scaling learning rate scheduler
+        self.patience = int(patience)              # Number of epochs to wait before reducing learning rate (plateau)
+        self.factor = float(factor)                # Factor by which to reduce learning rate on plateau
+        self.stoic_iter = int(stoic_iter)          # Warm-up iterations before applying early stopping and lr scheduler
 
         self.weights = None                        # Model weights
         self.b = None                              # Model bias
         self.loss_history = []                     # Store loss per-iteration
         self.epsilon = 1e-15                       # For numerical stability
+        self.current_lr = None                     # Current epoch learning rate
+        self.best_loss = float('inf')              # Best loss achieved (used for plateau scheduler)
+        self.wait = 0                              # Counter for epochs without improvement (plateau scheduler)
 
         self.classes = None                        # Unique classes
         self.n_classes = 0                         # Number of classes
@@ -113,48 +144,44 @@ class BasicClassifier:
         ## Raises:
             **None**
         """
-        y_pred_proba = np.clip(y_pred_proba, self.epsilon, 1 - self.epsilon)
         # Clip probabilities to avoid numerical issues
+        y_pred_proba = np.clip(y_pred_proba, self.epsilon, 1 - self.epsilon)
 
         if sample_weights is not None:
             # Weighted cross-entropy
-            ce = -np.sum(y_true * np.log(y_pred_proba) * sample_weights[:, np.newaxis], axis=1)
+            loss = -np.sum(y_true * np.log(y_pred_proba) * sample_weights[:, np.newaxis], axis=1)
             # Mean weighted CE
-            ce = np.mean(ce)
+            loss = np.mean(loss)
         else:
             # Unweighted cross-entropy
-            ce = -np.mean(np.sum(y_true * np.log(y_pred_proba), axis=1))
-
-        reg = 0.0                  # Regularization term initialization
+            loss = forlinear.categorical_ce(y_true, y_pred_proba)
 
         # L1 regularization
         if self.penalty == 'l1':
-            reg = self.alpha * np.sum(np.abs(self.weights))
+            loss += forlinear.lasso(self.weights, self.alpha)
         
         # L2 regularization
         elif self.penalty == 'l2':
-            reg = self.alpha * np.sum(self.weights ** 2)
+            loss += forlinear.ridge(self.weights, self.alpha)
         
         # Elastic Net regularization
         elif self.penalty == 'elasticnet':
-            # L1 part of Elastic Net
-            l1 = self.alpha * self.l1_ratio * np.sum(np.abs(self.weights))
-            # L2 part of Elastic Net
-            l2 = (1 - self.l1_ratio) * self.alpha * np.sum(self.weights**2)
-            # Total Elastic Net regularization
-            reg = l1 + l2
+            loss += forlinear.elasticnet(self.weights, self.alpha)
         
         # Loss after regularization
-        return ce + reg                                                                          # Total loss with regularization
+        return loss
 
-    def _calculate_grad(self, X: np.ndarray | spmatrix, y: np.ndarray, sample_weights: np.ndarray | None=None) -> tuple[np.ndarray, np.ndarray]:
+    def _calculate_grad(self, 
+                        X: np.ndarray | spmatrix, 
+                        y: np.ndarray, 
+                        sample_weights: Optional[np.ndarray] | None=None) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Calculate gradient of loss function with regulation.
         support sample weights for weighted gradient.
         L1, L2, and Elastic Net available.
         
         ## Args:
-            **X**: *np.ndarray*
+            **X**: *np.ndarray* or *spmatrix*
             Input features.
 
             **y**: *np.ndarray*
@@ -162,9 +189,12 @@ class BasicClassifier:
 
             **sample_weights**: *np.ndarray*
             Sample weights for weighted gradient.
-            
+
         ## Return:
-            **tuple**: *gradient w.r.t. weights, gradient w.r.t. bias*
+            **tuple**: *(np.ndarray, np.ndarray, np.ndarray).*
+            np.ndarray: gradient w.r.t. weights.
+            np.ndarray: gradient gradient w.r.t. bias.
+            np.ndarray: Calculated linear combination.
             
         ## Raises:
             **None**
@@ -181,7 +211,7 @@ class BasicClassifier:
             z += self.b
         
         # Compute softmax probabilities
-        y_pred_proba = AMO.softmax(z)
+        y_pred_proba = forlinear.softmax(z)
         
         # Prediction error
         error = y_pred_proba - y
@@ -189,34 +219,27 @@ class BasicClassifier:
         if sample_weights is not None:
             # Weighted weight gradient
             grad_w = (X.T @ (error * sample_weights[:, np.newaxis])) / X.shape[0]
-            # Weighted bias gradient
+            # Bias gradient
             grad_b = np.average(error, weights=sample_weights, axis=0) if self.intercept else np.zeros(self.n_classes)
-        
+
         else:
-            # Unweighted weight gradient
-            grad_w = (X.T @ error) / X.shape[0]
-            # Unweighted bias gradient
-            grad_b = np.mean(error, axis=0) if self.intercept else np.zeros(self.n_classes)
+            # Unweighted weight and biasgradient
+            grad_w, grad_b = forlinear.cce_deriv(X, error, self.intercept, self.n_classes)
         
         # L1 regularization gradient
         if self.penalty == 'l1':
-            grad_w += self.alpha * np.sign(self.weights)
+            grad_w += forlinear.lasso_deriv(self.weights, self.alpha)
 
         # L2 regularization gradient
         elif self.penalty == 'l2':
-            grad_w += 2 * self.alpha * self.weights
+            grad_w += forlinear.ridge_deriv(self.weights, self.alpha)
         
         # Elastic Net regularization
         elif self.penalty == 'elasticnet':
-            # L1 part of Elastic Net
-            l1_grad = self.l1_ratio * np.sign(self.weights)
-            # L2 part of Elastic Net
-            l2_grad = 2 * ((1 - self.l1_ratio) * self.weights)
-            # Total Elastic Net gradient
-            grad_w += self.alpha * (l1_grad + l2_grad)
+            grad_w += forlinear.elasticnet_deriv(self.weights, self.alpha)
         
         # Return gradients for weights and bias
-        return grad_w, grad_b
+        return grad_w, grad_b, z
     
     def predict_proba(self, X_test: np.ndarray | spmatrix) -> np.ndarray:
         """
@@ -265,7 +288,7 @@ class BasicClassifier:
            z += self.b
         
         # Return softmax probabilities
-        return AMO.softmax(z)
+        return forlinear.softmax(z)
 
     # ========== MAIN METHODS ==========
     def fit(self, X_train: np.ndarray | spmatrix, y_train: np.ndarray | spmatrix) -> None:
@@ -344,10 +367,10 @@ class BasicClassifier:
 
         # Map arbitrary class labels to integer indices [0..n_classes-1]
         # Use integer_labeling helper to produce integer labels for downstream operations
-        y_int = Indexing.integer_labeling(y_processed, self.classes, to_integer_from='labels')
+        y_int = integer_labeling(y_processed, self.classes, to_integer_from='labels')
 
         # Get one-hot from integer labels
-        y_onehot = Indexing.one_hot_labeling(y_int, np.arange(self.n_classes))
+        y_onehot = one_hot_labeling(y_int, np.arange(self.n_classes))
 
         # ---------- Pre-train process ----------
         # Initialize weights if needed
@@ -374,8 +397,44 @@ class BasicClassifier:
 
         # RNG for shuffling
         rng = np.random.default_rng(self.random_state)
+        
+        # Current learning rate initialization
+        self.current_lr = self.learning_rate
         # Iteration loop
         for i in range(self.max_iter):
+            # Apply LR scheduler after warm-up iterations
+            if i > self.stoic_iter:
+                if self.lr_scheduler == 'constant':
+                    self.current_lr = self.current_lr
+                    # Keep learning rate constant
+
+                elif self.lr_scheduler == 'invscaling':
+                    self.current_lr = self.current_lr / ((i + 1)**self.power_t + self.epsilon)
+                    # Inverse scaling decay
+
+                elif self.lr_scheduler == 'plateau':
+                    current_loss = self._calculate_loss(y_onehot, self.predict_proba(X_processed))
+                    # Compute full dataset loss
+                    if current_loss < self.best_loss - self.epsilon:
+                        self.best_loss = current_loss
+                        # Update best loss
+                        self.wait = 0
+                        # Reset wait counter
+                    elif abs(current_loss - self.best_loss) < self.tol:
+                        self.wait += 1
+                        # Increment wait counter
+                    else:
+                        self.wait = 0
+                        # Reset wait counter
+
+                    if self.wait >= self.patience:
+                        self.current_lr *= self.factor
+                        # Reduce learning rate
+                        self.wait = 0
+                        # Reset wait counter
+                        if self.verbose == 1:
+                            print(f"|=-Epoch {i + 1} reducing learning rate to {self.current_lr:.6f}-=|")
+
             # Shuffle data if enabled
             if self.shuffle:
                 indices = rng.permutation(num_samples)  # Permutation indices
@@ -383,29 +442,23 @@ class BasicClassifier:
                 y_onehot = y_onehot[indices]   # Shuffle y
                 sample_weights = sample_weights[indices]   # Shuffle sample weights
 
-            # Linear combination
-            z_current = X_processed @ self.weights
-            if self.intercept:
-                # Add bias if intercept is used
-                z_current += self.b
+            # Compute gradients using current proba
+            grad_w, grad_b, z_current = self._calculate_grad(X_processed, y_onehot, sample_weights)
 
             # Get logits probabilities with softmax
-            y_proba_current = AMO.softmax(z_current)
+            y_proba_current = forlinear.softmax(z_current)
 
             # Current loss
             loss = self._calculate_loss(y_onehot, y_proba_current, sample_weights)
             # Store loss
             self.loss_history.append(loss)
 
-            # Compute gradients using current proba
-            grad_w, grad_b = self._calculate_grad(X_processed, y_onehot, sample_weights)
-
             # Update weights
-            self.weights -= self.learning_rate * grad_w
+            self.weights -= self.current_lr * grad_w
 
             if self.intercept:
                 # Update bias if intercept if used
-                self.b -= self.learning_rate * grad_b
+                self.b -= self.current_lr * grad_b
 
             # Check for NaN/Inf during training loop
             if not np.all(np.isfinite(self.weights)) or (self.intercept and not np.all(np.isfinite(self.b))):
@@ -416,15 +469,15 @@ class BasicClassifier:
                 raise OverflowError(f"Loss became NaN/Inf at epoch {i + 1}. Stopping training early.")
 
             # Early stopping
-            if i > 0 and abs(self.loss_history[-1] - self.loss_history[-2]) < self.tol and self.early_stop:
+            if i > 0 and abs(self.loss_history[-1] - self.loss_history[-2]) < self.tol and self.early_stop and i > self.stoic_iter:
                 break
 
             # Verbose logging
             if self.verbose == 1 and ((i % max(1, self.max_iter // 20)) == 0 or i < 5):
-                print(f"Epoch {i+1}/{self.max_iter}, Loss: {loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {np.mean(self.b):.6f}")
+                print(f"Epoch {i+1}/{self.max_iter}. Loss: {loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {np.mean(self.b):.6f}, Learning Rate: {self.current_lr:.6f}")
 
             elif self.verbose == 2:
-                print(f"Epoch {i+1}/{self.max_iter}, Loss: {loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {np.mean(self.b):.6f}")
+                print(f"Epoch {i+1}/{self.max_iter}. Loss: {loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {np.mean(self.b):.6f}, Learning Rate: {self.current_lr:.6f}")
 
 
     def predict(self, X_test: np.ndarray | spmatrix) -> np.ndarray:
@@ -453,3 +506,25 @@ class BasicClassifier:
         
         # Return predictions
         return pred_class
+    
+    def score(self, X_test: np.ndarray | spmatrix, y_test: np.ndarray) -> float:
+        """
+        Calculate the mean accuracy on the given test data and labels.
+
+        ## Args:
+            **X_test**: *np.ndarray* or *spmatrix*
+            Feature matrix.
+
+            **y_test**: *np.ndarray*
+            True target labels.
+
+        ## Returns:
+            **float**: *Mean accuracy score.*
+
+        ## Raises:
+            **None**
+        """
+        # ========== PREDICTION ==========
+        y_pred = self.predict(X_test)
+        # Compare prediction with true labels and compute mean
+        return np.mean(y_pred == y_test)

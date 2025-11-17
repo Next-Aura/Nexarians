@@ -1,19 +1,30 @@
-"""NexGML — Next Generation Machine Learning
+"""# NexGML — Next Generation Machine Learning
+A collection of educational ML implementations.
+## Description:
+  **NexGML (Next Generation Machine Learning) made from a teenager curiousness about AI,
+  NexGML is implementation of that teenager knowledge about AI. NexGML also has a purpose
+  for helping people to learn about machine learning and use them in some cases.**
+  
+## Provides:
+  - **gradient_supported**
+  - **tree_models**
+  - **indexing**
+  - **amo (Advanced Math Operations)**
 
-A collection of educational ML implementations focusing on gradient-based methods,
-tree models, and utility helpers.
+## See also:
+  - **scikit-learn**
+  - **xgboost**
+
+## Supports:
+  **You can also be part of NexGML with join our community discord, Nexarians Base Camp,
+  the discord server will provide AI related news, off-topic channel, and more!.**
+
+### Version:
+  **1.0.0**
 """
-__version__ = "0.1.3"
 
-from .helper.amo import AMO, ForTree
-from .helper.indexing import Indexing
-import gradient_supported
-import tree_models
+__version__ = "1.0.0"
 
 __all__ = [
-    "AMO", 
-    "ForTree", 
-    "__version__", 
-    "Indexing",
-    "gradient_supported",
-    "tree_models"]
+    "__version__",
+    ]

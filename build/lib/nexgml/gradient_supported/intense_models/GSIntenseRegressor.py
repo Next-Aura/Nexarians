@@ -2,7 +2,7 @@
 import numpy as np                           # For numerical computations 
 from scipy.sparse import spmatrix, issparse  # For sparse matrix handling
 from typing import Literal, Optional         # More specific type hints
-from nexgml.helper.amo import AMO            # For some math operations
+from nexgml.amo import forlinear             # For specific numerical computations
 
 # ========== THE MODEL ==========
 class IntenseRegressor:
@@ -20,7 +20,7 @@ class IntenseRegressor:
         max_iter: int=1000, 
         learning_rate: float=0.01,
         penalty: Optional[Literal["l1", "l2", "elasticnet"]] | None="l2", 
-        alpha: float=0.001, 
+        alpha: float=0.0001, 
         l1_ratio: float=0.5, 
         loss: Literal['mse', 'rmse', 'mae', 'smoothl1'] | None='mse', 
         fit_intercept: bool=True, 
@@ -32,7 +32,7 @@ class IntenseRegressor:
         lr_scheduler: Literal["constant", "invscaling", 'plateau'] | None='invscaling', 
         optimizer: Literal['mbgd', 'adam', 'adamw'] | None='mbgd', 
         batch_size: int=16, 
-        power_t: float=0.5, 
+        power_t: float=0.25, 
         patience: int=5, 
         factor: float=0.5, 
         delta: int=0.5,
@@ -51,7 +51,7 @@ class IntenseRegressor:
             **penalty**: *{'l1', 'l2', 'elasticnet'} or None, default='l2'*
             Type of regularization ('l1', 'l2', 'elasticnet') or None.
 
-            **alpha**: *float, default=0.001*
+            **alpha**: *float, default=0.0001*
             Regularization strength (used if penalty is not None).
 
             **l1_ratio**: *float, default=0.5*
@@ -88,7 +88,7 @@ class IntenseRegressor:
             **batch_size**: *int, default=16*
             Number of samples per mini-batch when using mini-batch gradient descent (MBGD, Adam, AdamW).
             
-            **power_t**: *float, default=0.5*
+            **power_t**: *float, default=0.25*
             The exponent for inverse scaling learning rate schedule (used if lr_scheduler='invscaling').
 
             **patience**: *int, default=5*
@@ -169,17 +169,17 @@ class IntenseRegressor:
             self.v_b = 0.0                                      # Second moment for bias
 
     # ========== HELPER METHODS  ==========
-    def _calculate_loss(self, X: np.ndarray, y: np.ndarray) -> float:
+    def _calculate_loss(self, y_true: np.ndarray, y_pred: np.ndarray) -> float:
         """
         Calculating loss with regulation, MSE, RMSE, MAE, and Huber available.
         Penalty, l1, l2, elasticnet available.
         
         ## Args:
-            **X**: *np.ndarray*
-            Input features.
-
-            **y**: *np.ndarray*
+            **y_true**: *np.ndarray*
             True target values.
+
+            **y_pred**: *np.ndarray*
+            Predicted target values.
             
         ## Returns:
             **float**: *total loss with regulation*
@@ -187,51 +187,37 @@ class IntenseRegressor:
         ## Raises:
             **None**
         """
-        # Linear combination
-        f = X @ self.weights
-        
-        # Add bias if intercept is used
-        if self.intercept:
-           f += self.b
-
         # MSE loss function
         if self.loss == 'mse':
-            loss = AMO.mean_squared_error(y, f)
+            loss = forlinear.mean_squared_error(y_true, y_pred)
         
         # RMSE loss function
         elif self.loss == 'rmse':
-            loss = AMO.root_squared_error(y, f)
+            loss = forlinear.root_squared_error(y_true, y_pred)
 
         # MAE loss function
         elif self.loss == 'mae':
-            loss = AMO.mean_absolute_error(y, f)
+            loss = forlinear.mean_absolute_error(y_true, y_pred)
 
         # Smooth L1 loss function
         elif self.loss == 'smoothl1':
-            loss = AMO.smoothl1_loss(y, f, self.delta)
-
-        penalty = 0             # Penalty initialization
+            loss = forlinear.smoothl1_loss(y_true, y_pred, self.delta)
         
         # L1 penalty regulation
         if self.penalty == "l1":
-          penalty = self.alpha * np.sum(np.abs(self.weights))
+          loss += forlinear.lasso(self.weights, self.alpha)
         
         # L2 penalty regulation
         elif self.penalty == "l2":
-          penalty = self.alpha * np.sum(self.weights**2)
+          loss += forlinear.ridge(self.weights, self.alpha)
         
         # Elastic Net penalty regulation
         elif self.penalty == "elasticnet":
-          # L1 part
-          l1 = self.l1_ratio * np.sum(np.abs(self.weights))
-          # L2 part
-          l2 = (1 - self.l1_ratio) * np.sum(self.weights**2)
-          # Total with alpha as regulation strength
-          penalty = self.alpha * (l1 + l2)
+          loss += forlinear.elasticnet(self.weights, self.alpha, self.l1_ratio)
            
-        return loss + penalty
+        return loss
     
-    def _calculate_grad(self, X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, float]:
+    def _calculate_grad(self, X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, float, np.ndarray]:
         """
         Calculate gradient of loss function with regulation.
         L1, L2, and Elastic Net available.
@@ -244,7 +230,10 @@ class IntenseRegressor:
             True target values.
             
         ## Return:
-            **tuple**: *gradient w.r.t. weights, gradient w.r.t. bias*
+            **tuple**: *(np.ndarray, float, np.ndarray).*
+            np.ndarray: gradient w.r.t. weights.
+            float: gradient w.r.t. bias.
+            np.ndarray: Calculated linear combination.
             
         ## Raises:
             **None**
@@ -257,78 +246,41 @@ class IntenseRegressor:
            f += self.b
         
         # Calculate error (residual)
-        error = f - y
-
-        grad_b = 0.0         # Initialize bias
-        num_samples = X.shape[0]
+        residual = f - y
 
         # MSE loss gradient
         if self.loss == 'mse':
-            grad_w = X.T @ (2 * error) / num_samples
-            
-            # Calculate bias gradient if intercept is used
-            if self.intercept:
-              grad_b = np.mean(2 * error)
+            grad_w, grad_b = forlinear.mse_deriv(X, residual, self.intercept)
         
         # RMSE loss gradient
         elif self.loss == 'rmse':
-           rmse = np.sqrt(np.mean(error**2))
-           grad_w = (X.T @ (2 * error)) / (num_samples * rmse + 1e-10)
-           
-           # Calculate bias gradient if intercept is used
-           if self.intercept:
-              grad_b = np.mean(2 * error) / (rmse + 1e-10)
+           grad_w, grad_b = forlinear.rmse_deriv(X, residual, self.intercept)
         
         # MAE loss gradient
         elif self.loss == 'mae':
-           grad_w = X.T @ np.sign(error) / num_samples
-           
-           # Calculate bias gradient if intercept is used
-           if self.intercept:
-            grad_b = np.mean(np.sign(error))
+           grad_w, grad_b = forlinear.mae_deriv(X, residual, self.intercept)
 
         # Smooth L1 loss gradient
         elif self.loss == 'smoothl1':
-           grad_w = X.T @ np.where(np.abs(error) <= self.delta, 
-                                    error, 
-                                    self.delta * np.sign(error)
-                                    ) / num_samples
-
-           if self.intercept:
-              grad_b = np.mean(
-                  np.where(np.abs(error) <= self.delta, 
-                           error, 
-                           self.delta * np.sign(error))
-                           )
-
-
-        grad_w_penalty = np.zeros_like(self.weights)    # Initialize gradient penalty
+           grad_w, grad_b = forlinear.smoothl1_deriv(X, residual, self.intercept, self.delta)
         
         # L1 penalty gradient
         if self.penalty == "l1":
-            grad_w_penalty = self.alpha * np.sign(self.weights)
+            grad_w += forlinear.lasso_deriv(self.weights, self.alpha)
         
         # L2 penalty gradient (not for AdamW as it uses weight decay)
         elif self.penalty == "l2" and self.optimizer != "adamw":
-            grad_w_penalty = 2 * self.alpha * self.weights
-        
+            grad_w += forlinear.ridge_deriv(self.weights, self.alpha)
+
         # L2 penalty gradient for AdamW (zero because weight decay handles it separately)
         elif self.penalty == "l2" and self.optimizer == "adamw":
-            grad_w_penalty = np.zeros_like(self.weights) 
+            grad_w += np.zeros_like(self.weights) 
         
         # Elastic Net penalty gradient
         elif self.penalty == "elasticnet":
-            # L1 part
-            l1 = self.l1_ratio * np.sign(self.weights)
-            # L2 part
-            l2 = 2 * ((1 - self.l1_ratio) * self.weights)
-            # Total with alpha as regulation strength
-            grad_w_penalty = self.alpha * (l2 + l1)
-        
-        # Sum weight gradient with penalty
-        grad_w = grad_w + grad_w_penalty
+            grad_w += forlinear.elasticnet_deriv(self.weights, self.alpha, self.l1_ratio)
 
-        return grad_w, grad_b
+        return grad_w, grad_b, f
 
     # ========== MAIN METHODS (Disesuaikan dengan format GSBR) ==========
     def fit(self, X_train: np.ndarray | spmatrix, y_train: np.ndarray | spmatrix) -> None:
@@ -452,14 +404,8 @@ class IntenseRegressor:
                     self.current_lr = self.learning_rate / ((i + 1)**self.power_t + self.epsilon)
 
                 elif self.lr_scheduler == 'plateau':
-                        # Plateau learning rate scheduler
-                        if i == 0:
-                            # Initialize best loss at epoch 0
-                            self.best_loss = self._calculate_loss(X_processed, y_processed)
-                        
-                        else:
-                          # Get current loss
-                          current_loss = self._calculate_loss(X_processed, y_processed)
+                        # Get current loss
+                        current_loss = self._calculate_loss(y_processed, X_processed @ self.weights + self.b if self.intercept else X_processed @ self.weights)
                         # Check for best loss improvement
                         if current_loss < self.best_loss - self.epsilon:
                             # Update best loss
@@ -514,7 +460,7 @@ class IntenseRegressor:
                 y_batch = y_shuffled[s_idx:e_idx]
 
                 # Check if y is 1D for grad calculation
-                grad_w, grad_b = self._calculate_grad(X_batch, y_batch.ravel())
+                grad_w, grad_b, pred = self._calculate_grad(X_batch, y_batch.ravel())
                 
                 # Mini-batch Gradient Descent optimizer
                 if self.optimizer == 'mbgd':
@@ -605,7 +551,7 @@ class IntenseRegressor:
                             self.b -= self.current_lr * m_b_hat / (np.sqrt(v_b_hat) + self.epsilon)
 
             # Current loss
-            loss = self._calculate_loss(X_processed, y_processed)
+            loss = self._calculate_loss(y_batch, pred)
 
             # Store current loss to loss history
             self.loss_history.append(loss)
@@ -617,15 +563,15 @@ class IntenseRegressor:
             # Check of weights or bias is NaN during training
             if np.any(np.isnan(self.weights)) or np.any(np.isinf(self.weights)) or np.isnan(self.b) or np.isinf(self.b):
                     raise OverflowError(f"There's NaN in epoch {i + 1} during the training process")
-
+            
             # Level 1 verbose logging
-            if self.verbose == 2:
-                print(f"- Epoch {i + 1}. Loss: {loss:.4f}, Weights: {np.mean(self.weights)}, Bias: {self.b}, LR: {self.current_lr:.4f}")
-            
-            # Level 2 verbose logging
             if self.verbose == 1 and ((i % max(1, self.max_iter // 20)) == 0 or i < 5):
-                print(f"- Epoch {i + 1}. Loss: {loss:.4f}, Weights: {np.mean(self.weights)}, Bias: {self.b}, LR: {self.current_lr:.4f}")
-            
+                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {self.b:.6f}, Learning Rate: {self.current_lr:.6f}")
+
+            # Level 2 verbose logging
+            elif self.verbose == 2:
+                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {self.b:.6f}, Learning Rate: {self.current_lr:.6f}")
+                        
             # Early stopping based on tolerance
             if self.early_stop and i > self.stoic_iter and i > 1:
               if abs(self.loss_history[-1] - self.loss_history[-2]) < self.tol:
@@ -661,3 +607,26 @@ class IntenseRegressor:
         pred = X_processed @ self.weights + self.b
 
         return pred
+    
+    def score(self, X_test: np.ndarray | spmatrix, y_test: np.ndarray) -> float:
+        """
+        Calculate the coefficient of determination R^2 of the prediction.
+
+        ## Args:
+            **X_test**: *np.ndarray* or *spmatrix*
+            Feature matrix.
+
+            **y_test**: *np.ndarray*
+            True target values.
+
+        ## Returns:
+            **float**: *R^2 score.*
+
+        ## Raises:
+            **None**
+        """
+        # ========== PREDICTION ==========
+        y_pred = self.predict(X_test)
+        u = ((y_test - y_pred) ** 2).sum()
+        v = ((y_test - y_test.mean()) ** 2).sum()
+        return 1 - u / v if v != 0 else 0.0
