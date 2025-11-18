@@ -83,6 +83,12 @@ Returns $\hat{y}$ for new samples.
 ### `score(X_test, y_test)`
 Returns R² score.
 
+### `get_params(deep)`
+Returns model paramters
+
+### `set_params(**params)`
+Returns model's attribute that ready to set
+
 ## Usage Examples
 
 ### 1. Default (with intercept)

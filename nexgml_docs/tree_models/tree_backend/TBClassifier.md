@@ -88,6 +88,12 @@ Returns predicted class labels by traversing the tree.
 ### `score(X_test, y_test)`
 Returns mean accuracy.
 
+### `get_params(deep)`
+Returns model paramters
+
+### `set_params(**params)`
+Returns model's attribute that ready to set
+
 ## Usage Examples
 
 ### 1. Gini (default)

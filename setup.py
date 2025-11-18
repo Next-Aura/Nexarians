@@ -24,6 +24,7 @@ setup(
     long_description=get_long_description(),
     long_description_content_type="text/markdown",
     author="Nexo-kun",
+    author_email="nexokun.contact@gmail.com",
     license="MIT",
     python_requires=">=3.10",
     packages=find_packages(),

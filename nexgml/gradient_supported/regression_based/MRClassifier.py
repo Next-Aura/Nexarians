@@ -131,7 +131,7 @@ class MRClassifier:
         self.verbose = int(verbose)                # Verbosity level for training progress logging (0: silent, 1: progress)
         self.stoic_iter = int(stoic_iter)          # Warm-up iterations before applying early stopping and lr scheduler
         self.loss = loss                           # Loss function type
-        self.delta = delta                         # # Huber loss threshold
+        self.delta = float(delta)                  # Huber loss threshold
 
         # ========== INTERNAL VARIABLES ==========
         self.epsilon = 1e-15                       # Small constant to prevent division by zero in computations
@@ -539,3 +539,57 @@ class MRClassifier:
         y_pred = self.predict(X_test)
         # Compare prediction with true labels and compute mean
         return np.mean(y_pred == y_test)
+    
+    def get_params(self, deep=True) -> dict[str, object]:
+        """
+        Returns model paramters.
+
+        ## Args:
+            **deep**: *bool, default=True*
+            If True, will return the parameters for this estimator and contained subobjects that are estimators.
+
+        ## Returns:
+            **dict**: *Model parameters.*
+
+        ## Raises:
+            **None**
+        """
+        return {
+            "max_iter": self.max_iter,
+            "learning_rate": self.learning_rate,
+            "penalty": self.penalty,
+            "alpha": self.alpha,
+            "l1_ratio": self.l1_ratio,
+            "loss": self.loss,
+            "fit_intercept": self.intercept,
+            "tol": self.tol,
+            "shuffle": self.shuffle,
+            "random_state": self.random_state,
+            "early_stopping": self.early_stop,
+            "verbose": self.verbose,
+            "lr_scheduler": self.lr_scheduler,
+            "batch_size": self.batch_size,
+            "power_t": self.power_t,
+            "patience": self.patience,
+            "factor": self.factor,
+            "delta": self.delta,
+            "stoic_iter": self.stoic_iter
+        }
+
+    def set_params(self, **params) -> "MRClassifier":
+        """
+        Returns model's attribute that ready to set.
+
+        ## Args:
+            **params**: *dict*
+            Model parameters to set.
+
+        ## Returns:
+            **MRClassifier**: *The model instance with updated parameters.*
+
+        ## Raises:
+            **None**
+        """
+        for key, value in params.items():
+            setattr(self, key, value)
+        return self

@@ -630,3 +630,58 @@ class IntenseRegressor:
         u = ((y_test - y_pred) ** 2).sum()
         v = ((y_test - y_test.mean()) ** 2).sum()
         return 1 - u / v if v != 0 else 0.0
+
+    def get_params(self, deep=True) -> dict[str, object]:
+        """
+        Returns model paramters.
+
+        ## Args:
+            **deep**: *bool, default=True*
+            If True, will return the parameters for this estimator and contained subobjects that are estimators.
+
+        ## Returns:
+            **dict**: *Model parameters.*
+
+        ## Raises:
+            **None**
+        """
+        return {
+            "max_iter": self.max_iter,
+            "learning_rate": self.learning_rate,
+            "penalty": self.penalty,
+            "alpha": self.alpha,
+            "l1_ratio": self.l1_ratio,
+            "loss": self.loss,
+            "fit_intercept": self.intercept,
+            "tol": self.tol,
+            "shuffle": self.shuffle,
+            "random_state": self.random_state,
+            "early_stopping": self.early_stop,
+            "verbose": self.verbose,
+            "lr_scheduler": self.lr_scheduler,
+            "optimizer": self.optimizer,
+            "batch_size": self.batch_size,
+            "power_t": self.power_t,
+            "patience": self.patience,
+            "factor": self.factor,
+            "delta": self.delta,
+            "stoic_iter": self.stoic_iter
+        }
+
+    def set_params(self, **params) -> 'IntenseRegressor':
+        """
+        Returns model's attribute that ready to set.
+
+        ## Args:
+            **params**: *dict*
+            Model parameters to set.
+
+        ## Returns:
+            **IntenseRegressor**: *The model instance with updated parameters.*
+
+        ## Raises:
+            **None**
+        """
+        for key, value in params.items():
+            setattr(self, key, value)
+        return self
