@@ -292,3 +292,45 @@ class ElasticNetClassifier:
         y_pred = self.predict(X_test)
         # Compare prediction with true labels and compute mean
         return np.mean(y_pred == y_test)
+    
+    def get_params(self, deep=True) -> dict[str, object]:
+        """
+        Returns model paramters.
+
+        ## Args:
+            **deep**: *bool, default=True*
+            If True, will return the parameters for this estimator and contained subobjects that are estimators.
+
+        ## Returns:
+            **dict**: *Model parameters.*
+
+        ## Raises:
+            **None**
+        """
+        return {
+            "max_iter": self.max_iter,
+            "alpha": self.alpha,
+            "l1_ratio": self.l1_ratio,
+            "fit_intercept": self.intercept,
+            "tol": self.tol,
+            "early_stopping": self.early_stop,
+            "verbose": self.verbose
+        }
+
+    def set_params(self, **params) -> 'ElasticNetClassifier':
+        """
+        Returns model's attribute that ready to set.
+
+        ## Args:
+            **params**: *dict*
+            Model parameters to set.
+
+        ## Returns:
+            **ElasticNetClassifier**: *The model instance with updated parameters.*
+
+        ## Raises:
+            **None**
+        """
+        for key, value in params.items():
+            setattr(self, key, value)
+        return self

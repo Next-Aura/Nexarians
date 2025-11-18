@@ -20,10 +20,10 @@ A collection of educational ML implementations.
   the discord server will provide AI related news, off-topic channel, and more!.**
 
 ### Version:
-  **1.0.2**
+  **1.1.0**
 """
 
-__version__ = "1.0.2"
+__version__ = "1.1.0"
 
 __all__ = [
     "__version__",

@@ -1,8 +1,9 @@
 Metadata-Version: 2.4
 Name: nexgml
-Version: 1.0.2
+Version: 1.1.0
 Summary: NexGML — Next Generation Machine Learning (educational ML utilities)
 Author: Nexo-kun
+Author-email: nexokun.contact@gmail.com
 License: MIT
 Project-URL: Homepage, https://github.com/Next-Aura/Nexarians
 Project-URL: Documentation, https://github.com/Next-Aura/Nexarians#documentation
@@ -14,6 +15,7 @@ License-File: LICENSE
 Requires-Dist: numpy>=1.23
 Requires-Dist: scipy>=1.10
 Requires-Dist: typing_extensions
+Dynamic: author-email
 Dynamic: license-file
 Dynamic: requires-python
 

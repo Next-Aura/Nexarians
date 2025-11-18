@@ -286,3 +286,44 @@ class L1Regressor:
         u = ((y_test - y_pred) ** 2).sum()
         v = ((y_test - y_test.mean()) ** 2).sum()
         return 1 - u / v if v != 0 else 0.0
+    
+    def get_params(self, deep=True) -> dict[str, object]:
+        """
+        Returns model paramters.
+
+        ## Args:
+            **deep**: *bool, default=True*
+            If True, will return the parameters for this estimator and contained subobjects that are estimators.
+
+        ## Returns:
+            **dict**: *Model parameters.*
+
+        ## Raises:
+            **None**
+        """
+        return {
+            "max_iter": self.max_iter,
+            "alpha": self.alpha,
+            "fit_intercept": self.intercept,
+            "tol": self.tol,
+            "early_stopping": self.early_stop,
+            "verbose": self.verbose
+        }
+
+    def set_params(self, **params) -> 'L1Regressor':
+        """
+        Returns model's attribute that ready to set.
+
+        ## Args:
+            **params**: *dict*
+            Model parameters to set.
+
+        ## Returns:
+            **L1Regressor**: *The model instance with updated parameters.*
+
+        ## Raises:
+            **None**
+        """
+        for key, value in params.items():
+            setattr(self, key, value)
+        return self

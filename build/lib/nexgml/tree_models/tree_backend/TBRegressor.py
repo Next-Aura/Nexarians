@@ -526,3 +526,46 @@ class TreeBackendRegressor:
         u = ((y_test - y_pred) ** 2).sum()
         v = ((y_test - y_test.mean()) ** 2).sum()
         return 1 - u / v if v != 0 else 0.0
+    
+    def get_params(self, deep=True) -> dict[str, object]:
+        """
+        Returns model paramters.
+
+        ## Args:
+            **deep**: *bool, default=True*
+            If True, will return the parameters for this estimator and contained subobjects that are estimators.
+
+        ## Returns:
+            **dict**: *Model parameters.*
+
+        ## Raises:
+            **None**
+        """
+        return {
+            "max_depth": self.max_depth,
+            "min_samples_leaf": self.min_samples_leaf,
+            "criterion": self.criterion,
+            "max_features": self.max_features,
+            "max_samples": self.max_samples,
+            "random_state": self.random_state,
+            "min_samples_split": self.min_samples_split,
+            "min_impurity_decrease": self.min_impurity_decrease
+        }
+
+    def set_params(self, **params) -> 'TreeBackendRegressor':
+        """
+        Returns model's attribute that ready to set.
+
+        ## Args:
+            **params**: *dict*
+            Model parameters to set.
+
+        ## Returns:
+            **TreeBackendRegressor**: *The model instance with updated parameters.*
+
+        ## Raises:
+            **None**
+        """
+        for key, value in params.items():
+            setattr(self, key, value)
+        return self
