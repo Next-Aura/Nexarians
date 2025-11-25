@@ -41,6 +41,27 @@ model.fit(X_train, y_train)
 print(f"Final Training Loss: {model.loss_history[-1]:.6f}")
 ```
 
+### 2\. Regressors (The Models)
+
+The primary model is the **Gradient Supported Intense Regressor (GSIR)**.
+
+```python
+from nexgml.gradient_supported import IntenseRegressor
+import numpy as np
+
+# Load data X, y...
+
+model = IntenseClassifier(
+    optimizer='adamw', 
+    lr_scheduler='plateau', 
+    batch_size=32, 
+    penalty='elasticnet'
+)
+model.fit(X_train, y_train)
+
+print(f"Final Training Loss: {model.loss_history[-1]:.6f}")
+```
+
 ### 2\. Helper Modules (Performance Backbone)
 
 These modules contain the high-speed math used internally.

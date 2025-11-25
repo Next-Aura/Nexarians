@@ -6,7 +6,8 @@ This repository includes a small collection of models and helpers intended for l
 
 - gradient_supported (linear classifier/regressor)
 - tree_models (decision tree and forest backends)
-- helper (math and indexing helpers)
+- amo / Advanced Math Operations (math operation computation)
+- indexing (data slicing and label encoding utilities)
 
 Requirements
 
