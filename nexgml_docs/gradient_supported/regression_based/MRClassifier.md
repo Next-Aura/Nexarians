@@ -2,7 +2,7 @@
 
 ## Overview
 
-MRC (Mini-batch Regression Classifier) is an advanced linear classification model implemented in Python. It uses **mini-batch gradient descent** with **softmax** for multi-class classification, minimizing regression-style loss functions (**MSE**, **RMSE**, **MAE**, **Smooth L1**) between one-hot labels and predicted probabilities. It includes regularization options (**L1**, **L2**, **ElasticNet**) and learning rate schedulers (**constant**, **invscaling**, **plateau**). It works with both dense and sparse matrices, offers early stopping, data shuffling, and multi-level verbose logging.
+MRC (Mini-batch Regression Classifier) is an advanced linear classification model implemented in Python. It uses **mini-batch gradient descent** with **softmax** for multi-class classification, minimizing regression-style loss functions (**MSE**, **RMSE**, **MAE**, **Smooth L1**) between one-hot labels and predicted probabilities. It includes regularization options (**L1**, **L2**, **ElasticNet**) and learning rate schedulers (**constant**, **invscaling**, **plateau**, **adaptive**). It works with both dense and sparse matrices, offers early stopping, data shuffling, and multi-level verbose logging.
 
 Perfect for teaching, quick prototyping, or when you need a flexible classifier using regression losses with mini-batch efficiency without heavy dependencies.
 
@@ -90,7 +90,8 @@ MAE uses **sign**; RMSE normalizes by current RMSE; Smooth L1 conditional.
 | `random_state` | `int \| None` | `None` | Seed for shuffling |
 | `early_stopping` | `bool` | `True` | Enable early stop |
 | `verbose` | `int` | `0` | 0 = silent, 1 = ~5 % progress, 2 = every epoch |
-| `lr_scheduler` | `Literal['constant','invscaling','plateau']` | `'invscaling'` | Learning rate scheduler |
+| `verbosity` | `Literal['light', 'heavy']` | `light` | light = standard log information, heavy = more detail log information |
+| `lr_scheduler` | `Literal['constant','invscaling','plateau', 'adative']` | `'invscaling'` | Type of learning rate scheduler |
 | `batch_size` | `int` | `16` | Mini-batch size |
 | `power_t` | `float` | `0.25` | Exponent for invscaling |
 | `patience` | `int` | `5` | Epochs to wait for plateau |
@@ -131,12 +132,6 @@ Returns predicted class labels (argmax of probabilities).
 
 ### `score(X_test, y_test)`
 Returns mean accuracy.
-
-### `get_params(deep)`
-Returns model paramters
-
-### `set_params(**params)`
-Returns model's attribute that ready to set
 
 ## Usage Examples
 

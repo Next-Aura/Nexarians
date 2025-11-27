@@ -93,12 +93,6 @@ Returns class probabilities (vote proportions).
 ### `score(X_test, y_test)`
 Returns mean accuracy.
 
-### `get_params(deep)`
-Returns model paramters
-
-### `set_params(**params)`
-Returns model's attribute that ready to set
-
 ## Usage Examples
 
 ### 1. Default (Gini + bootstrap)

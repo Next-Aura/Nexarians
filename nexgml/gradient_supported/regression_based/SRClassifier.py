@@ -5,6 +5,7 @@ from typing import Literal, Optional            # More specific type hints
 from nexgml.amo import forlinear                # For some math operation
 from nexgml.indexing import (integer_labeling, 
                              one_hot_labeling)  # For indexing utilities
+from warnings import warn                     # For warning messages
 
 # ========== THE MODEL ==========
 class SRClassifier:
@@ -28,7 +29,8 @@ class SRClassifier:
         random_state: int | None=None, 
         early_stopping: bool=True,
         verbose: int=0,
-        lr_scheduler: Literal["constant", "invscaling", 'plateau'] | None='invscaling', 
+        verbosity: Literal['light', 'heavy'] | None = 'light',
+        lr_scheduler: Literal["constant", "invscaling", "plateau", "adaptive"] | None="invscaling", 
         power_t: float=0.25, 
         patience: int=5, 
         factor: float=0.5, 
@@ -75,7 +77,10 @@ class SRClassifier:
             **verbose**: *int, default=0*
             If 1, print training progress (epoch, loss, etc.).
 
-            **lr_scheduler**: *{'constant', 'invscaling', 'plateau'} or None, default='invscaling'*
+            **verbosity**: *{'light', 'heavy'}, default='light'*
+            Level of detail for verbose output.
+
+            **lr_scheduler**: *{'constant', 'invscaling', 'plateau', 'adaptive} or None, default='invscaling'*
             Strategy for learning rate adjustment over iterations.
             
             **power_t**: *float, default=0.25*
@@ -98,21 +103,28 @@ class SRClassifier:
 
         ## Raises:
             **ValueError**: *If invalid loss, penalty, or lr_scheduler type is provided.*
+            **UserWarning**: *If verbose level 2 is used with heavy verbosity.*
         """
         # ========== PARAMETER VALIDATION ==========
         if penalty not in (None, "l1", "l2", "elasticnet"):
             raise ValueError(f"Invalid penalty argument {penalty}. Choose from 'l1', 'l2', or 'elasticnet'.")
         
+        if verbosity not in ('light', 'heavy'):
+            raise ValueError(f"Invalid verbosity argument, {verbosity}. Choose from 'light' or 'heavy'.")
+
         if loss not in ('mse', 'rmse', 'mae', 'smoothl1'):
             raise ValueError(f"Invalid loss argument, {loss}. Choose from 'mse', 'rmse', 'mae', or 'smoothl1'.")
 
-        if lr_scheduler not in {'invscaling', 'constant', 'plateau'}:
-            raise ValueError(f"Invalid lr_scheduler argument {lr_scheduler}. Choose from 'invscaling', 'constant', or 'plateau'.")
+        if lr_scheduler not in {'invscaling', 'constant', 'plateau', 'adaptive'}:
+            raise ValueError(f"Invalid lr_scheduler argument {lr_scheduler}. Choose from 'invscaling', 'constant', 'plateau', or 'adaptive'.")
+        
+        if verbose == 2 and verbosity == 'heavy':
+            warn("Verbose level 2 with heavy verbosity may produce excessive output.", UserWarning)
 
         # ========== HYPERPARAMETERS ==========
         self.max_iter = int(max_iter)              # Maximum number of training iterations (epochs)
-        self.penalty = penalty                     # Regularization penalty type ('l1', 'l2', 'elasticnet', or None)
-        self.lr_scheduler = lr_scheduler           # Learning rate scheduler type ('invscaling', 'constant', 'plateau')
+        self.penalty = str(penalty)                # Regularization penalty type ('l1', 'l2', 'elasticnet', or None)
+        self.lr_scheduler = str(lr_scheduler)      # Learning rate scheduler type ('invscaling', 'constant', 'plateau')
         self.learning_rate = float(learning_rate)  # Initial learning rate for gradient descent
         self.alpha = float(alpha)                  # Regularization strength (controls penalty magnitude)
         self.l1_ratio = float(l1_ratio)            # Elastic net mixing ratio between L1 and L2 (0 to 1)
@@ -126,8 +138,9 @@ class SRClassifier:
         self.early_stop = bool(early_stopping)     # Whether to enable early stopping
         self.verbose = int(verbose)                # Verbosity level for training progress logging (0: silent, 1: progress)
         self.stoic_iter = int(stoic_iter)          # Warm-up iterations before applying early stopping and lr scheduler
-        self.loss = loss                           # Loss function type
+        self.loss = str(loss)                      # Loss function type
         self.delta = float(delta)                  # Huber loss threshold
+        self.verbosity = str(verbosity)            # Verbosity level for logging
 
         # ========== INTERNAL VARIABLES ==========
         self.epsilon = 1e-15                       # Small constant to prevent division by zero in computations
@@ -414,35 +427,39 @@ class SRClassifier:
             
             if i > self.stoic_iter:
                 if self.lr_scheduler == 'constant':
-                    self.current_lr = self.learning_rate
                     # Keep learning rate constant
+                    self.current_lr = self.learning_rate
 
                 elif self.lr_scheduler == 'invscaling':
-                    self.current_lr = self.learning_rate / ((i + 1)**self.power_t + self.epsilon)
                     # Inverse scaling decay
+                    self.current_lr = self.learning_rate / ((i + 1)**self.power_t + self.epsilon)
+                
+                elif self.lr_scheduler == 'adaptive':
+                    # Adaptive learning rate based on loss ratio
+                    self.current_lr = min(10.0, max(self.current_lr * (self.loss_history[-1] / self.loss_history[-2]), 1e-8)) if i > 1 else self.current_lr
 
                 elif self.lr_scheduler == 'plateau':
-                    current_loss = self._calculate_loss(y_onehot, self.predict_proba(X_processed))
                     # Compute full dataset loss
+                    current_loss = self._calculate_loss(y_onehot, self.predict_proba(X_processed))
                     if current_loss < self.best_loss - self.epsilon:
-                        self.best_loss = current_loss
                         # Update best loss
-                        self.wait = 0
+                        self.best_loss = current_loss
                         # Reset wait counter
+                        self.wait = 0
                     elif abs(current_loss - self.best_loss) < self.tol:
-                        self.wait += 1
                         # Increment wait counter
+                        self.wait += 1
                     else:
-                        self.wait = 0
                         # Reset wait counter
+                        self.wait = 0
 
                     if self.wait >= self.patience:
-                        self.current_lr *= self.factor
                         # Reduce learning rate
-                        self.wait = 0
+                        self.current_lr *= self.factor
                         # Reset wait counter
-                        if self.verbose == 1:
-                            print(f"|=-Epoch {i + 1} reducing learning rate to {self.current_lr:.6f}-=|")
+                        self.wait = 0
+                        if self.verbose == 2 and self.verbosity == 'heavy':
+                            print(f"- Epoch {i + 1} reducing learning rate to {self.current_lr:.8f}.")
 
             # Compute gradients using current proba
             grad_w, grad_b, z_current = self._calculate_grad(X_processed, y_onehot)
@@ -474,13 +491,19 @@ class SRClassifier:
             if i > 0 and abs(self.loss_history[-1] - self.loss_history[-2]) < self.tol and self.early_stop and i > self.stoic_iter:
                 break
 
-            # Level 1 verbose logging
-            if self.verbose == 1 and ((i % max(1, self.max_iter // 20)) == 0 or i < 5):
-                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {np.mean(self.b):.6f}, Learning Rate: {self.current_lr:.6f}")
+            # Light verbose logging
+            if self.verbose == 1 and ((i % max(1, self.max_iter // 20)) == 0 or i < 5) and self.verbosity == 'light':
+                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {np.mean(self.b):.6f}")
 
-            # Level 2 verbose logging
-            elif self.verbose == 2:
-                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {np.mean(self.b):.6f}, Learning Rate: {self.current_lr:.6f}")
+            elif self.verbose == 2 and self.verbosity == 'light':
+                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {np.mean(self.b):.6f}")
+
+            # Heavy verbose logging
+            if self.verbose == 1 and ((i % max(1, self.max_iter // 20)) == 0 or i < 5) and self.verbosity == 'heavy':
+                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {loss:.8f}, Avg Weights: {np.mean(self.weights):.8f}, Avg Bias: {np.mean(self.b):.8f}, Current LR: {self.current_lr:.8f}")
+
+            elif self.verbose == 2 and self.verbosity == 'heavy':
+                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {loss:.8f}, Avg Weights: {np.mean(self.weights):.8f}, Avg Bias: {np.mean(self.b):.8f}, Current LR: {self.current_lr:.8f}")
 
 
     def predict(self, X_test: np.ndarray | spmatrix) -> np.ndarray:

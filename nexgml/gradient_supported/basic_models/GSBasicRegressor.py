@@ -3,6 +3,7 @@ import numpy as np                           # Numpy for numerical computations
 from scipy.sparse import issparse, spmatrix  # For sparse matrix handling
 from typing import Literal, Optional         # More specific type hints
 from nexgml.amo import forlinear             # For specific computation operations
+from warnings import warn                    # For warning messages
 
 # ========== THE MODEL ==========
 class BasicRegressor:
@@ -24,7 +25,8 @@ class BasicRegressor:
             random_state: int | None=None,
             early_stopping: bool=True,
             verbose: int=0,
-            lr_scheduler: Literal["constant", "invscaling", 'plateau'] | None='invscaling',
+            verbosity: Literal['light', 'heavy'] | None = 'light',
+            lr_scheduler: Literal["constant", "invscaling", 'plateau', 'adaptive'] | None='invscaling',
             power_t: float=0.25,
             patience: int=5,
             factor: float=0.5,
@@ -70,7 +72,10 @@ class BasicRegressor:
             **verbose**: *int, default=0*
             If 1, print training progress (epoch, loss, etc.).
 
-            **lr_scheduler**: *{'constant', 'invscaling', 'plateau'} or None, default='invscaling'*
+            **verbosity**: *{'light', 'heavy'}, default='light'*
+            Level of detail for verbose output.
+
+            **lr_scheduler**: *{'constant', 'invscaling', 'plateau', 'adaptive'}, default='invscaling'*
             Strategy for learning rate adjustment over iterations.
 
             **power_t**: *float, default=0.25*
@@ -89,7 +94,8 @@ class BasicRegressor:
             **None**
 
         ## Raises:
-            **ValueError**: *If invalid penalty, loss, or lr scheduler type is provided.*
+            **ValueError**: *If invalid penalty, loss, verbosity, or lr scheduler type is provided.*
+            **UserWarning**: *If verbose level 2 is used with heavy verbosity.*
         """
         # ========== PARAMETER VALIDATIONS ==========
         if penalty not in (None, "l1", "l2", "elasticnet"):
@@ -98,23 +104,29 @@ class BasicRegressor:
         if loss not in ('mse', 'rmse', 'mae'):
             raise ValueError(f"Invalid loss argument, {loss}. Choose from 'mse', 'rmse', or 'mae'.")
         
-        if lr_scheduler not in {'invscaling', 'constant', 'plateau'}:
-            raise ValueError(f"Invalid lr_scheduler argument {lr_scheduler}. Choose from 'invscaling', 'constant', or 'plateau'.")
-
+        if lr_scheduler not in {'invscaling', 'constant', 'plateau', 'adaptive'}:
+            raise ValueError(f"Invalid lr_scheduler argument, {lr_scheduler}. Choose from 'invscaling', 'constant', 'plateau', or 'adaptive'.")
+        
+        if verbosity not in ('light', 'heavy'):
+            raise ValueError(f"Invalid verbosity argument, {verbosity}. Choose from 'light' or 'heavy'.")
+        
+        if verbose == 2 and verbosity == 'heavy':
+            warn("Verbose level 2 with heavy verbosity may produce excessive output.", UserWarning)
 
         # ========== HYPERPARAMETERS ==========
         self.max_iter = int(max_iter)              # Model max training iterations
         self.learning_rate = float(learning_rate)  # Learning rate for gradient descent
         self.penalty = penalty                     # Penalties for regularization
         self.verbose = int(verbose)                # Model progress logging
+        self.verbosity = str(verbosity)            # Verbosity level for logging
         self.intercept = bool(fit_intercept)       # Fit intercept (bias) or not
         self.random_state = random_state           # Random state for reproducibility
 
         self.tol = float(tol)                      # Training loss tolerance for early stopping
-        self.shuffle = shuffle                     # Data shuffling
-        self.loss = loss                           # Loss function
+        self.shuffle = bool(shuffle)               # Data shuffling
+        self.loss = str(loss)                      # Loss function
         self.early_stop = bool(early_stopping)     # Early stopping flag
-        self.lr_scheduler = lr_scheduler           # Learning rate scheduler type ('invscaling', 'constant', 'plateau')
+        self.lr_scheduler = lr_scheduler           # Learning rate scheduler type ('invscaling', 'constant', 'plateau', 'adaptive')
         self.power_t = float(power_t)              # Power parameter for inverse scaling learning rate scheduler
         self.patience = int(patience)              # Number of epochs to wait before reducing learning rate (plateau)
         self.factor = float(factor)                # Factor by which to reduce learning rate on plateau
@@ -323,6 +335,10 @@ class BasicRegressor:
                 elif self.lr_scheduler == 'invscaling':
                     # Inverse scaling decay
                     self.current_lr = self.current_lr / ((i + 1)**self.power_t + self.epsilon)
+
+                elif self.lr_scheduler == 'adaptive':
+                    # Adaptive learning rate based on loss ratio
+                    self.current_lr = min(10.0, max(self.current_lr * (self.loss_history[-1] / self.loss_history[-2]), 1e-8)) if i > 1 else self.current_lr
                 
                 # Plateau learning rate scheduler
                 elif self.lr_scheduler == 'plateau':
@@ -345,8 +361,8 @@ class BasicRegressor:
                         self.current_lr *= self.factor
                         # Reset wait counter
                         self.wait = 0
-                        if self.verbose == 1:
-                            print(f"|=-Epoch {i + 1} reducing learning rate to {self.current_lr:.6f}-=|")
+                        if self.verbose == 2 and self.verbosity == 'heavy':
+                            print(f"- Epoch {i + 1} reducing learning rate to {self.current_lr:.8f}.")
 
             if self.shuffle:
                 indices = rng.permutation(num_samples)
@@ -380,12 +396,19 @@ class BasicRegressor:
             if np.any(np.isnan(self.weights)) or np.any(np.isinf(self.weights)) or np.isnan(self.b) or np.isinf(self.b):
                 raise OverflowError(f"There's NaN in epoch {i + 1} during the training process")
             
-            # Verbose for training loop logging
-            if self.verbose == 1 and ((i % max(1, self.max_iter // 20)) == 0 or i < 5):
+            # Verbose with light verbosity for training loop logging
+            if self.verbose == 1 and ((i % max(1, self.max_iter // 20)) == 0 or i < 5) and self.verbosity == 'light':
                 print(f"Epoch {i+1}/{self.max_iter}. Loss: {loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {self.b:.6f}")
 
-            elif self.verbose == 2:
+            elif self.verbose == 2 and self.verbosity == 'light':
                 print(f"Epoch {i+1}/{self.max_iter}. Loss: {loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {self.b:.6f}")
+
+            # Verbose with heavy verbosity for training loop logging
+            if self.verbose == 1 and ((i % max(1, self.max_iter // 20)) == 0 or i < 5) and self.verbosity == 'heavy':
+                print(f"Epoch {i+1}/{self.max_iter}. Loss: {loss:.8f}, Avg Weights: {np.mean(self.weights):.8f}, Avg Bias: {self.b:.8f}, Current LR: {self.current_lr:.8f}")
+
+            elif self.verbose == 2 and self.verbosity == 'heavy':
+                print(f"Epoch {i+1}/{self.max_iter}. Loss: {loss:.8f}, Avg Weights: {np.mean(self.weights):.8f}, Avg Bias: {self.b:.8f}, Current LR: {self.current_lr:.8f}")
             
             # Early stopping based on loss convergence
             if self.early_stop and i > 1 and i > self.stoic_iter:

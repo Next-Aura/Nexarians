@@ -2,7 +2,7 @@
 
 ## Overview
 
-GSIC (Gradient Supported Intense Classifier) is an advanced, custom linear classification model implemented in Python. It supports optimization via **mini-batch gradient descent** with **softmax** for multi-class classification and includes regularization options such as **L1 (Lasso)**, **L2 (Ridge)**, and **ElasticNet** to prevent overfitting. The model minimizes **categorical cross-entropy** loss and offers multiple optimizers (**MBGD**, **Adam**, **AdamW**) and learning rate schedulers (**constant**, **invscaling**, **plateau**). It works with both dense and sparse matrices, offers early stopping, data shuffling, and multi-level verbose logging.
+GSIC (Gradient Supported Intense Classifier) is an advanced, custom linear classification model implemented in Python. It supports optimization via **mini-batch gradient descent** with **softmax** for multi-class classification and includes regularization options such as **L1 (Lasso)**, **L2 (Ridge)**, and **ElasticNet** to prevent overfitting. The model minimizes **categorical cross-entropy** loss and offers multiple optimizers (**MBGD**, **Adam**, **AdamW**) and learning rate schedulers (**constant**, **invscaling**, **plateau**, **adaptive**). It works with both dense and sparse matrices, offers early stopping, data shuffling, and multi-level verbose logging.
 
 Perfect for teaching, quick prototyping, or when you need a flexible, interpretable classifier with advanced optimization without heavy dependencies.
 
@@ -80,7 +80,8 @@ $$
 | `random_state` | `int \| None` | `None` | Seed for shuffling |
 | `early_stopping` | `bool` | `True` | Enable early stop |
 | `verbose` | `int` | `0` | 0 = silent, 1 = progress |
-| `lr_scheduler` | `Literal['constant','invscaling','plateau']` | `'invscaling'` | Learning rate scheduler |
+| `verbosity` | `Literal['light', 'heavy']` | `light` | light = standard log information, heavy = more detail log information |
+| `lr_scheduler` | `Literal['constant','invscaling','plateau', 'adative']` | `'invscaling'` | Type of learning rate scheduler |
 | `optimizer` | `Literal['mbgd','adam','adamw']` | `'mbgd'` | Optimizer type |
 | `batch_size` | `int` | `16` | Mini-batch size |
 | `power_t` | `float` | `0.25` | Exponent for invscaling |
@@ -120,12 +121,6 @@ Returns predicted class labels (argmax of probabilities).
 
 ### `score(X_test, y_test)`
 Returns mean accuracy.
-
-### `get_params(deep)`
-Returns model paramters
-
-### `set_params(**params)`
-Returns model's attribute that ready to set
 
 ## Usage Examples
 
@@ -214,7 +209,7 @@ plt.show()
 | **Sparse Input Support** | ✅ Full (`csr`, `csc`) | ✅ Full (`csr`, `csc`) |
 | **Early Stopping** | ✅ Built-in (`tol`, `stoic_iter`) | ❌ Only with `SAG/SAGA` + `warm_start` |
 | **Data Shuffling** | ✅ Per-epoch + `random_state` | ❌ Only in `SAG/SAGA` |
-| **Verbose Levels** | ✅ 0/1 (progress) | ✅ Basic (via `verbose`) |
+| **Verbose Levels** | ✅ 0/1/2 (progress) | ✅ Basic (via `verbose`) |
 | **Class Weighting** | ✅ Via AMO | ✅ Manual via `class_weight` |
 | **Learning Rate Control** | ✅ Initial + schedulers (constant/invscaling/plateau) | ❌ Only adaptive in `SAG/SAGA` |
 | **Loss History** | ✅ `loss_history` attribute | ❌ Not exposed |

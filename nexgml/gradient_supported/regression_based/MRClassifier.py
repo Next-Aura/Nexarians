@@ -4,6 +4,7 @@ from scipy.sparse import issparse, spmatrix   # For sparse matrix handling
 from typing import Literal, Optional          # More specific type hints
 from nexgml.amo import forlinear              # For some math operation
 from nexgml.indexing import one_hot_labeling  # For one-hot labeling
+from warnings import warn                     # For warning messages
 
 # ========== THE MODEL ==========
 class MRClassifier:
@@ -20,14 +21,15 @@ class MRClassifier:
         penalty: Optional[Literal["l1", "l2", "elasticnet"]] | None="l2", 
         alpha: float=0.0001, 
         l1_ratio: float=0.5,
-        loss: Literal["mse", "rmse", 'mae', 'smoothl1'] | None="mse",
+        loss: Literal["mse", "rmse", "mae", "smoothl1"] | None="mse",
         fit_intercept: bool=True, 
         tol: float=0.0001, 
         shuffle: bool | None=True, 
         random_state: int | None=None, 
         early_stopping: bool=True,
         verbose: int=0,
-        lr_scheduler: Literal["constant", "invscaling", 'plateau'] | None='invscaling', 
+        verbosity: Literal['light', 'heavy'] | None = 'light',
+        lr_scheduler: Literal["constant", "invscaling", "plateau", "adaptive"] | None="invscaling", 
         batch_size: int=16, 
         power_t: float=0.25, 
         patience: int=5, 
@@ -74,8 +76,11 @@ class MRClassifier:
 
             **verbose**: *int, default=0*
             If 1, print training progress (epoch, loss, etc.).
+
+            **verbosity**: *{'light', 'heavy'}, default='light'*
+            Level of detail for verbose output.
             
-            **lr_scheduler**: *{'constant', 'invscaling', 'plateau'} or None, default='invscaling'*
+            **lr_scheduler**: *{'constant', 'invscaling', 'plateau', 'adaptive'}, default='invscaling'*
             Strategy for learning rate adjustment over iterations.
 
             **batch_size**: *int, default=16*
@@ -100,22 +105,29 @@ class MRClassifier:
             **None**
 
         ## Raises:
-            **ValueError**: *If invalid loss, penalty, or lr_scheduler type is provided.*
+            **ValueError**: *If invalid loss, verbosity, penalty, or lr_scheduler type is provided.*
+            **UserWarning**: *If verbose level 2 is used with heavy verbosity.*
         """
         # ========== PARAMETER VALIDATION ==========
         if penalty not in {'l1', 'l2', 'elasticnet', None}:
             raise ValueError(f"Invalid penalty argument {penalty}. Choose from 'l1', 'l2', 'elasticnet', or None.")
         
-        if lr_scheduler not in {'invscaling', 'constant', 'plateau'}:
-            raise ValueError(f"Invalid lr_scheduler argument {lr_scheduler}. Choose from 'invscaling', 'constant', or 'plateau'.")
+        if verbosity not in ('light', 'heavy'):
+            raise ValueError(f"Invalid verbosity argument, {verbosity}. Choose from 'light' or 'heavy'.")
+
+        if lr_scheduler not in {'invscaling', 'constant', 'plateau', 'adaptive'}:
+            raise ValueError(f"Invalid lr_scheduler argument {lr_scheduler}. Choose from 'invscaling', 'constant', 'plateau', or 'adaptive'.")
         
         if loss not in ('mse', 'rmse', 'mae', 'smoothl1'):
             raise ValueError(f"Invalid loss argument, {loss}. Choose from 'mse', 'rmse', 'mae', or 'smoothl1'.")
+        
+        if verbose == 2 and verbosity == 'heavy':
+            warn("Verbose level 2 with heavy verbosity may produce excessive output.", UserWarning)
 
         # ========== HYPERPARAMETERS ==========
         self.max_iter = int(max_iter)              # Maximum number of training iterations (epochs)
-        self.penalty = penalty                     # Regularization penalty type ('l1', 'l2', 'elasticnet', or None)
-        self.lr_scheduler = lr_scheduler           # Learning rate scheduler type ('invscaling', 'constant', 'plateau')
+        self.penalty = str(penalty)                # Regularization penalty type ('l1', 'l2', 'elasticnet', or None)
+        self.lr_scheduler = str(lr_scheduler)      # Learning rate scheduler type ('invscaling', 'constant', 'plateau')
         self.learning_rate = float(learning_rate)  # Initial learning rate for gradient descent
         self.alpha = float(alpha)                  # Regularization strength (controls penalty magnitude)
         self.l1_ratio = float(l1_ratio)            # Elastic net mixing ratio between L1 and L2 (0 to 1)
@@ -130,8 +142,9 @@ class MRClassifier:
         self.early_stop = bool(early_stopping)     # Whether to enable early stopping
         self.verbose = int(verbose)                # Verbosity level for training progress logging (0: silent, 1: progress)
         self.stoic_iter = int(stoic_iter)          # Warm-up iterations before applying early stopping and lr scheduler
-        self.loss = loss                           # Loss function type
+        self.loss = str(loss)                      # Loss function type
         self.delta = float(delta)                  # Huber loss threshold
+        self.verbosity = str(verbosity)            # Verbosity level for logging
 
         # ========== INTERNAL VARIABLES ==========
         self.epsilon = 1e-15                       # Small constant to prevent division by zero in computations
@@ -409,7 +422,11 @@ class MRClassifier:
                 elif self.lr_scheduler == 'invscaling':
                     # Inverse scaling decay
                     self.current_lr = self.learning_rate / ((i + 1)**self.power_t + self.epsilon)
-                 
+                
+                elif self.lr_scheduler == 'adaptive':
+                    # Adaptive learning rate based on loss ratio
+                    self.current_lr = min(10.0, max(self.current_lr * (self.loss_history[-1] / self.loss_history[-2]), 1e-8)) if i > 1 else self.current_lr
+
                 # Pleateau learning rate scheduler
                 elif self.lr_scheduler == 'plateau':
                     # Compute full dataset loss
@@ -431,8 +448,8 @@ class MRClassifier:
                         self.current_lr *= self.factor
                         # Reset wait counter
                         self.wait = 0
-                        if self.verbose == 1:
-                            print(f"|=-Epoch {i + 1} reducing learning rate to {self.current_lr:.6f}-=|")
+                        if self.verbose == 2 and self.verbosity == 'heavy':
+                            print(f"- Epoch {i + 1} reducing learning rate to {self.current_lr:.8f}.")
 
             # ========== DATA SHUFFLING ==========
             if self.shuffle:
@@ -480,13 +497,20 @@ class MRClassifier:
             avg_epoch_loss = epoch_loss_sum / num_batches
             # Store epoch losss
             self.loss_history.append(avg_epoch_loss)
-            # Level 1 verbose logging
-            if self.verbose == 1 and ((i % max(1, self.max_iter // 20)) == 0 or i < 5):
-                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {avg_epoch_loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {np.mean(self.b):.6f}, Learning Rate: {self.current_lr:.6f}")
 
-            # Level 2 verbose logging
-            elif self.verbose == 2:
-                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {avg_epoch_loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {np.mean(self.b):.6f}, Learning Rate: {self.current_lr:.6f}")
+            # Light verbose logging
+            if self.verbose == 1 and ((i % max(1, self.max_iter // 20)) == 0 or i < 5) and self.verbosity == 'light':
+                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {avg_epoch_loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {np.mean(self.b):.6f}")
+
+            elif self.verbose == 2 and self.verbosity == 'light':
+                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {avg_epoch_loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {np.mean(self.b):.6f}")
+
+            # Heavy verbose logging
+            if self.verbose == 1 and ((i % max(1, self.max_iter // 20)) == 0 or i < 5) and self.verbosity == 'heavy':
+                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {avg_epoch_loss:.8f}, Avg Weights: {np.mean(self.weights):.8f}, Avg Bias: {np.mean(self.b):.8f}, Current LR: {self.current_lr:.8f}")
+
+            elif self.verbose == 2 and self.verbosity == 'heavy':
+                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {avg_epoch_loss:.8f}, Avg Weights: {np.mean(self.weights):.8f}, Avg Bias: {np.mean(self.b):.8f}, Current LR: {self.current_lr:.8f}")
 
             # ========== EARLY STOPPING ==========
             if self.early_stop and i > self.stoic_iter:

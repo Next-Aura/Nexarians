@@ -2,7 +2,7 @@
 
 ## Overview
 
-GSIR (Gradient Supported Intense Regressor) is an advanced, custom linear regression model implemented in Python. It supports optimization via **mini-batch gradient descent** and includes regularization options such as **L1 (Lasso)**, **L2 (Ridge)**, and **ElasticNet** to prevent overfitting. The model can minimize **MSE**, **RMSE**, **MAE**, or **Smooth L1 (Huber)** loss functions and offers multiple optimizers (**MBGD**, **Adam**, **AdamW**) and learning rate schedulers (**constant**, **invscaling**, **plateau**). It works with both dense and sparse matrices, offers early stopping, data shuffling, and multi-level verbose logging.
+GSIR (Gradient Supported Intense Regressor) is an advanced, custom linear regression model implemented in Python. It supports optimization via **mini-batch gradient descent** and includes regularization options such as **L1 (Lasso)**, **L2 (Ridge)**, and **ElasticNet** to prevent overfitting. The model can minimize **MSE**, **RMSE**, **MAE**, or **Smooth L1 (Huber)** loss functions and offers multiple optimizers (**MBGD**, **Adam**, **AdamW**) and learning rate schedulers (**constant**, **invscaling**, **plateau**, **adaptive**). It works with both dense and sparse matrices, offers early stopping, data shuffling, and multi-level verbose logging.
 
 Perfect for teaching, quick prototyping, or when you need a flexible, interpretable regressor with advanced optimization without heavy dependencies.
 
@@ -83,7 +83,8 @@ MAE uses the **sign** function; RMSE normalises by the current RMSE value; Smoot
 | `random_state` | `int \| None` | `None` | Seed for shuffling |
 | `early_stopping` | `bool` | `True` | Enable early stop |
 | `verbose` | `int` | `0` | 0 = silent, 1 = ~5 % progress, 2 = every epoch + LR updates |
-| `lr_scheduler` | `Literal['constant','invscaling','plateau']` | `'invscaling'` | Learning rate scheduler |
+| `verbosity` | `Literal['light', 'heavy']` | `light` | light = standard log information, heavy = more detail log information |
+| `lr_scheduler` | `Literal['constant','invscaling','plateau', 'adative']` | `'invscaling'` | Type of learning rate scheduler |
 | `optimizer` | `Literal['mbgd','adam','adamw']` | `'mbgd'` | Optimizer type |
 | `batch_size` | `int` | `16` | Mini-batch size |
 | `power_t` | `float` | `0.25` | Exponent for invscaling |
@@ -118,12 +119,6 @@ Returns $\hat{y}$ for new samples.
 
 ### `score(X_test, y_test)`
 Returns R² score.
-
-### `get_params(deep)`
-Returns model paramters
-
-### `set_params(**params)`
-Returns model's attribute that ready to set
 
 ## Usage Examples
 
