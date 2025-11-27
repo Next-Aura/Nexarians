@@ -108,7 +108,10 @@ class L1Regressor:
             # Ensure sparse matrix is in a compatible dtype if necessary
             # Often not needed if input is already float64, but good practice
             if X_train.dtype != np.float64:
-                 X = X_train.astype(np.float64, copy=False) # copy=False avoids copying if dtype is already correct
+                X = X_train.astype(np.float64, copy=False) # copy=False avoids copying if dtype is already correct
+
+            else:
+                X = X_train
 
         Y = np.asarray(y_train, dtype=np.float64)
 
@@ -206,7 +209,7 @@ class L1Regressor:
 
             # Level 2 verbose logging
             elif self.verbose == 2:
-                print(f"Epoch {iteration + 1}/{self.max_iter}. Residual: {residual_mean:.6f}")
+                print(f"Epoch {iteration + 1}/{self.max_iter}. Residual: {residual_mean:.8f}")
 
 
             # Check for convergence based on change in coefficients

@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: nexgml
-Version: 1.1.0
+Version: 1.2.0
 Summary: NexGML — Next Generation Machine Learning (educational ML utilities)
 Author: Nexo-kun
 Author-email: nexokun.contact@gmail.com
@@ -47,6 +47,27 @@ The primary model is the **Gradient Supported Intense Classifier (GSIC)**.
 
 ```python
 from nexgml.gradient_supported import IntenseClassifier
+import numpy as np
+
+# Load data X, y...
+
+model = IntenseClassifier(
+    optimizer='adamw', 
+    lr_scheduler='plateau', 
+    batch_size=32, 
+    penalty='elasticnet'
+)
+model.fit(X_train, y_train)
+
+print(f"Final Training Loss: {model.loss_history[-1]:.6f}")
+```
+
+### 2\. Regressors (The Models)
+
+The primary model is the **Gradient Supported Intense Regressor (GSIR)**.
+
+```python
+from nexgml.gradient_supported import IntenseRegressor
 import numpy as np
 
 # Load data X, y...

@@ -3,6 +3,7 @@ import numpy as np                           # For numerical computations
 from scipy.sparse import spmatrix, issparse  # For sparse matrix handling
 from typing import Literal, Optional         # More specific type hints
 from nexgml.amo import forlinear             # For specific numerical computations
+from warnings import warn                    # For warning messages
 
 # ========== THE MODEL ==========
 class IntenseRegressor:
@@ -22,15 +23,16 @@ class IntenseRegressor:
         penalty: Optional[Literal["l1", "l2", "elasticnet"]] | None="l2", 
         alpha: float=0.0001, 
         l1_ratio: float=0.5, 
-        loss: Literal['mse', 'rmse', 'mae', 'smoothl1'] | None='mse', 
+        loss: Literal["mse", "rmse", "mae", "smoothl1"] | None="mse", 
         fit_intercept: bool=True, 
         tol: float=0.0001, 
         shuffle: bool | None=True, 
         random_state: int | None=None, 
         early_stopping: bool=True,
         verbose: int=0,
-        lr_scheduler: Literal["constant", "invscaling", 'plateau'] | None='invscaling', 
-        optimizer: Literal['mbgd', 'adam', 'adamw'] | None='mbgd', 
+        verbosity: Literal['light', 'heavy'] | None = 'light',
+        lr_scheduler: Literal["constant", "invscaling", "plateau", "adaptive"] | None="invscaling", 
+        optimizer: Literal["mbgd", "adam", "adamw"] | None="mbgd", 
         batch_size: int=16, 
         power_t: float=0.25, 
         patience: int=5, 
@@ -45,7 +47,7 @@ class IntenseRegressor:
             **max_iter**: *int, default=1000*
             Maximum number of gradient descent iterations (epochs).
 
-            **eta0**: *float, default=0.01*
+            **learning_rate**: *float, default=0.01*
             Initial learning rate (step size) for gradient descent updates.
 
             **penalty**: *{'l1', 'l2', 'elasticnet'} or None, default='l2'*
@@ -79,7 +81,10 @@ class IntenseRegressor:
             **verbose**: *int, default=0*
             If 1, print training progress (epoch, loss, weights, bias, LR). If 2, print more detailed LR updates.
             
-            **lr_scheduler**: *{'constant', 'invscaling', 'plateau'} or None, default='invscaling'*
+            **verbosity**: *{'light', 'heavy'}, default='light'*
+            Level of detail for verbose output.
+
+            **lr_scheduler**: *{'constant', 'invscaling', 'plateau', 'adaptive'}, default='invscaling'*
             Strategy for learning rate adjustment over iterations.
 
             **optimizer**: *{'mbgd', 'adam', 'adamw'} or None, default='mbgd'*
@@ -109,11 +114,15 @@ class IntenseRegressor:
         ## Raises:
             **ValueError**: *If invalid penalty, loss, optimizer, or lr_scheduler type is provided, 
             or if AdamW is used with a non-L2 penalty.*
+            **UserWarning**: *If verbose level 2 is used with heavy verbosity.*
         """
 
         # ========== PARAMETER VALIDATION ==========
         if penalty not in {"l1", "l2", "elasticnet", None}:
             raise ValueError(f"Invalid penalty argument, {penalty}. Choose from 'l1', 'l2', 'elasticnet', or None")
+        
+        if verbosity not in ('light', 'heavy'):
+            raise ValueError(f"Invalid verbosity argument, {verbosity}. Choose from 'light' or 'heavy'.")
 
         if loss not in {'mse', 'rmse', 'mae', 'smoothl1'}:
             raise ValueError(f"Invalid loss argument, {loss}. Choose from 'mse', 'rmse', 'mae', or 'huber'")
@@ -121,28 +130,32 @@ class IntenseRegressor:
         if optimizer not in {'mbgd', 'adam', 'adamw'}:
             raise ValueError(f"Invalid optimizer argument, {optimizer}. Choose from 'mbgd', 'adam', or 'adamw'")
         
-        if lr_scheduler not in {'constant', 'invscaling', 'plateau'}:
-            raise ValueError(f"Invalid lr_scheduler argument, {lr_scheduler}. Choose from 'constant', 'invscaling', or 'plateau'")
+        if lr_scheduler not in {'constant', 'invscaling', 'plateau', 'adaptive'}:
+            raise ValueError(f"Invalid lr_scheduler argument, {lr_scheduler}. Choose from 'constant', 'invscaling', 'plateau', or 'adaptive'.")
         
         if penalty in {'l1', 'elasticnet'} and optimizer == 'adamw':
             raise ValueError("AdamW only supports L2 regularization. Please change the penalty to 'l2'")
+        
+        if verbose == 2 and verbosity == 'heavy':
+            warn("Verbose level 2 with heavy verbosity may produce excessive output.", UserWarning)
 
         # ========== HYPERPARAMETERS ==========
         self.max_iter = int(max_iter)                           # Model max training iterations
         self.learning_rate = float(learning_rate)               # Initial learning rate
-        self.penalty = penalty                                  # Penalties for regularization
+        self.penalty = str(penalty)                             # Penalties for regularization
         self.alpha = float(alpha)                               # Alpha for regularization power
         self.l1_ratio = float(l1_ratio)                         # Elastic net mixing ratio
-        self.loss = loss                                        # Loss function
+        self.loss = str(loss)                                   # Loss function
         self.intercept = bool(fit_intercept)                    # Fit intercept (bias) or not
         self.tol = float(tol)                                   # Training loss tolerance
         self.shuffle = bool(shuffle)                            # Data shuffling
         self.random_state = random_state                        # Random state for reproducibility
         self.early_stop = bool(early_stopping)                  # Early stopping flag
         self.verbose = int(verbose)                             # Model progress logging
+        self.verbosity = str(verbosity)                         # Verbosity level for logging
         
-        self.lr_scheduler = lr_scheduler                        # Learning rate scheduler method
-        self.optimizer = optimizer                              # Optimizer type
+        self.lr_scheduler = str(lr_scheduler)                   # Learning rate scheduler method
+        self.optimizer = str(optimizer)                         # Optimizer type
         self.batch_size = int(batch_size)                       # Batch size
         self.power_t = float(power_t)                           # Invscaling power
         self.patience = int(patience)                           # Patience for plateau scheduler
@@ -401,7 +414,11 @@ class IntenseRegressor:
                 
                 # Invscaling learning rate scheduler
                 elif self.lr_scheduler == 'invscaling':
-                    self.current_lr = self.learning_rate / ((i + 1)**self.power_t + self.epsilon)
+                    self.current_lr = self.current_lr / ((i + 1)**self.power_t + self.epsilon)
+                
+                elif self.lr_scheduler == 'adaptive':
+                    # Adaptive learning rate based on loss ratio
+                    self.current_lr = min(10.0, max(self.current_lr * (self.loss_history[-1] / self.loss_history[-2]), 1e-8)) if i > 1 else self.current_lr
 
                 elif self.lr_scheduler == 'plateau':
                         # Get current loss
@@ -429,9 +446,9 @@ class IntenseRegressor:
                           # Reset wait counter
                           self.wait = 0
                     
-                        if self.verbose == 2:
-                            # Log learning rate reduce if verbose in level 2
-                            print(f"Epoch {i + 1} reducing learning rate to {self.current_lr:.6f}")
+                        if self.verbose == 2 and self.verbosity == 'heavy':
+                            # Log learning rate reduce if verbose in level 2 with heavy verbosity
+                            print(f"- Epoch {i + 1} reducing learning rate to {self.current_lr:.8f}")
             
             # Shuffle condition
             if self.shuffle:
@@ -564,13 +581,19 @@ class IntenseRegressor:
             if np.any(np.isnan(self.weights)) or np.any(np.isinf(self.weights)) or np.isnan(self.b) or np.isinf(self.b):
                     raise OverflowError(f"There's NaN in epoch {i + 1} during the training process")
             
-            # Level 1 verbose logging
-            if self.verbose == 1 and ((i % max(1, self.max_iter // 20)) == 0 or i < 5):
-                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {self.b:.6f}, Learning Rate: {self.current_lr:.6f}")
+            # Light verbose logging
+            if self.verbose == 1 and ((i % max(1, self.max_iter // 20)) == 0 or i < 5) and self.verbosity == 'light':
+                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {self.b:.6f}")
 
-            # Level 2 verbose logging
-            elif self.verbose == 2:
-                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {self.b:.6f}, Learning Rate: {self.current_lr:.6f}")
+            elif self.verbose == 2 and self.verbosity == 'light':
+                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {self.b:.6f}")
+
+            # Heavy verbose logging
+            if self.verbose == 1 and ((i % max(1, self.max_iter // 20)) == 0 or i < 5) and self.verbosity == 'heavy':
+                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {loss:.8f}, Avg Weights: {np.mean(self.weights):.8f}, Avg Bias: {self.b:.8f}, Current LR: {self.current_lr:.8f}")
+
+            elif self.verbose == 2 and self.verbosity == 'heavy':
+                print(f"Epoch {i + 1}/{self.max_iter}. Loss: {loss:.8f}, Avg Weights: {np.mean(self.weights):.8f}, Avg Bias: {self.b:.8f}, Current LR: {self.current_lr:.8f}")
                         
             # Early stopping based on tolerance
             if self.early_stop and i > self.stoic_iter and i > 1:

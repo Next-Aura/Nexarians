@@ -222,7 +222,7 @@ class L1Classifier:
 
             # Level 2 verbose logging
             elif self.verbose == 2:
-                print(f"Epoch {iteration + 1}/{self.max_iter}. Residual: {residual_mean:.6f}")
+                print(f"Epoch {iteration + 1}/{self.max_iter}. Residual: {residual_mean:.8f}")
 
             # Check for convergence based on change in coefficients
             if abs(np.mean(w - w_old)) < self.tol and self.early_stop:
