@@ -9,8 +9,10 @@
   ## Note:
     **All the helpers implemented in python programming language.**"""
 
-from .arr import (safe_array)
+from .arr import (safe_array, hasinf, hasnan)
 
 __all__ = [
     'safe_array',
+    'hasinf',
+    'hasnan'
 ]

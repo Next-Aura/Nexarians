@@ -533,8 +533,12 @@ class MRClassifier:
 
             # ========== EARLY STOPPING ==========
             if self.early_stop and i > self.stoic_iter:
-                if (np.abs(self.loss_history[-1]) - np.abs(self.loss_history[-2])) < self.tol:
+                if abs(self.loss_history[-1] - self.loss_history[-2]) < self.tol:
                     break 
+                
+                if i > 2 * self.stoic_iter:
+                    if abs(np.mean(self.loss_history[-self.stoic_iter:]) - np.mean(self.loss_history[-2*self.stoic_iter:-self.stoic_iter])) < self.tol:
+                        break
 
     def predict(self, X_test: np.ndarray | spmatrix) -> np.ndarray:
         """

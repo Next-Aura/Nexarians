@@ -18,7 +18,8 @@ class L1Regressor:
                  fit_intercept: bool=True,
                  tol: float=1e-4,
                  early_stopping: bool=True,
-                 verbose: int=0):
+                 verbose: int=0,
+                 stoic_iter: int=10) -> None:
         """
         Initialize the L1Regressor model.
 
@@ -41,6 +42,9 @@ class L1Regressor:
             **verbose**: *int, default=0*
             Verbosity level (0: no output, 1: some output, 2: detailed output).
 
+            **stoic_iter**: *int, default=10*
+            Number of initial epochs to skip before checking for convergence/tolerance in early stopping.
+
         ## Returns:
           **None**
 
@@ -54,6 +58,7 @@ class L1Regressor:
         self.max_iter = int(max_iter)              # Model max training iterations
         self.tol = float(tol)                      # Training loss tolerance
         self.early_stop = bool(early_stopping)     # Early stopping flag
+        self.stoic_iter = int(stoic_iter)          # Warm-up iterations before applying early stopping
 
         self.weights = None                        # Model weights
         self.b = None                              # Model bias
@@ -223,9 +228,14 @@ class L1Regressor:
                 print(f"Epoch {iteration + 1}/{self.max_iter}. Residual: {residual_mean:.8f}")
 
 
-            # Check for convergence based on change in coefficients
-            if abs(np.mean(w - w_old)) < self.tol and self.early_stop:
-                break
+            # ========== EARLY STOPPING ==========
+            if self.early_stop and iteration > self.stoic_iter:
+                if abs(self.loss_history[-1] - self.loss_history[-2]) < self.tol:
+                    break 
+                
+                if iteration > 2 * self.stoic_iter:
+                    if abs(np.mean(self.loss_history[-self.stoic_iter:]) - np.mean(self.loss_history[-2*self.stoic_iter:-self.stoic_iter])) < self.tol:
+                        break
 
         # Assign final coefficients and intercept
         if self.intercept:

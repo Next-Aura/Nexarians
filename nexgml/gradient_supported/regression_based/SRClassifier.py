@@ -476,6 +476,10 @@ class SRClassifier:
 
             # Current loss
             loss = self._calculate_loss(y_onehot, y_proba_current)
+
+            if np.isnan(loss):
+                loss = safe_array(loss)
+
             # Store loss
             self.loss_history.append(loss)
 
@@ -501,10 +505,6 @@ class SRClassifier:
             if not np.isfinite(loss):
                 raise OverflowError(f"Loss became NaN/Inf at epoch {i + 1}. Stopping training early.")
 
-            # Early stopping
-            if i > 0 and abs(self.loss_history[-1] - self.loss_history[-2]) < self.tol and self.early_stop and i > self.stoic_iter:
-                break
-
             # Light verbose logging
             if self.verbose == 1 and ((i % max(1, self.max_iter // 20)) == 0 or i < 5) and self.verbosity == 'light':
                 print(f"Epoch {i + 1}/{self.max_iter}. Loss: {loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {np.mean(self.b):.6f}")
@@ -519,6 +519,14 @@ class SRClassifier:
             elif self.verbose == 2 and self.verbosity == 'heavy':
                 print(f"Epoch {i + 1}/{self.max_iter}. Loss: {loss:.8f}, Avg Weights: {np.mean(self.weights):.8f}, Avg Bias: {np.mean(self.b):.8f}, Current LR: {self.current_lr:.8f}")
 
+            # ========== EARLY STOPPING ==========
+            if self.early_stop and i > self.stoic_iter:
+                if abs(self.loss_history[-1] - self.loss_history[-2]) < self.tol:
+                    break 
+                
+                if i > 2 * self.stoic_iter:
+                    if abs(np.mean(self.loss_history[-self.stoic_iter:]) - np.mean(self.loss_history[-2*self.stoic_iter:-self.stoic_iter])) < self.tol:
+                        break
 
     def predict(self, X_test: np.ndarray | spmatrix) -> np.ndarray:
         """

@@ -574,19 +574,22 @@ class IntenseRegressor:
             # Current loss
             loss = self._calculate_loss(y_batch, pred)
 
+            if np.isnan(loss):
+                loss = safe_array(loss)
+
             # Store current loss to loss history
             self.loss_history.append(loss)
-            
-            # Check of weights or bias is finite during traing
-            if not np.all(np.isfinite(self.weights)) or (self.intercept and not np.isfinite(self.b)):
-                raise OverflowError(f"Weights or bias became NaN/Inf at epoch {i + 1}. Stopping training early.")
-            
+
             # Check of weights or bias is NaN during training
             if np.any(np.isnan(self.weights)) or np.any(np.isinf(self.weights)) or np.isnan(self.b) or np.isinf(self.b):
                 self.weights = safe_array(self.weights)
                 
                 if self.intercept:
                     self.b = safe_array(self.b)
+
+            # Check of weights or bias is finite during traing
+            if not np.all(np.isfinite(self.weights)) or (self.intercept and not np.isfinite(self.b)):
+                raise OverflowError(f"Weights or bias became NaN/Inf at epoch {i + 1}. Stopping training early.")
             
             # Light verbose logging
             if self.verbose == 1 and ((i % max(1, self.max_iter // 20)) == 0 or i < 5) and self.verbosity == 'light':
@@ -602,10 +605,14 @@ class IntenseRegressor:
             elif self.verbose == 2 and self.verbosity == 'heavy':
                 print(f"Epoch {i + 1}/{self.max_iter}. Loss: {loss:.8f}, Avg Weights: {np.mean(self.weights):.8f}, Avg Bias: {self.b:.8f}, Current LR: {self.current_lr:.8f}")
                         
-            # Early stopping based on tolerance
-            if self.early_stop and i > self.stoic_iter and i > 1:
-              if abs(self.loss_history[-1] - self.loss_history[-2]) < self.tol:
-                break
+            # ========== EARLY STOPPING ==========
+            if self.early_stop and i > self.stoic_iter:
+                if abs(self.loss_history[-1] - self.loss_history[-2]) < self.tol:
+                    break 
+                
+                if i > 2 * self.stoic_iter:
+                    if abs(np.mean(self.loss_history[-self.stoic_iter:]) - np.mean(self.loss_history[-2*self.stoic_iter:-self.stoic_iter])) < self.tol:
+                        break
 
     def predict(self, X_test: np.ndarray) -> np.ndarray:
         """

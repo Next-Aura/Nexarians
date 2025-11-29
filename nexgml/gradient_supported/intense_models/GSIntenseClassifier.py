@@ -372,8 +372,9 @@ class IntenseClassifier:
         
         # Initialize weights if needed
         if self.weights is None or self.weights.shape != (num_features, self.n_classes):
-            # Zero initialization for weights
-            self.weights = np.zeros((num_features, self.n_classes), dtype=np.float64)
+            # Random normal init
+            rng = np.random.default_rng(self.random_state)
+            self.weights = rng.normal(0, 0.01, (num_features, self.n_classes)).astype(np.float64)
         
         # Initialize bias if needed
         if self.intercept and (self.b is None or self.b.shape != (self.n_classes,)):
@@ -544,6 +545,10 @@ class IntenseClassifier:
             # ========== EPOCH LOSS AND LOGGING ==========
             # Average loss over all batches
             avg_epoch_loss = epoch_loss_sum / num_batches
+
+            if np.isnan(avg_epoch_loss):
+                avg_epoch_loss = safe_array(avg_epoch_loss)
+                
             # Store epoch loss
             self.loss_history.append(avg_epoch_loss)
 
@@ -576,6 +581,10 @@ class IntenseClassifier:
             if self.early_stop and i > self.stoic_iter:
                 if abs(self.loss_history[-1] - self.loss_history[-2]) < self.tol:
                     break 
+                
+                if i > 2 * self.stoic_iter:
+                    if abs(np.mean(self.loss_history[-self.stoic_iter:]) - np.mean(self.loss_history[-2*self.stoic_iter:-self.stoic_iter])) < self.tol:
+                        break
 
     def predict(self, X_test: np.ndarray | spmatrix) -> np.ndarray:
         """

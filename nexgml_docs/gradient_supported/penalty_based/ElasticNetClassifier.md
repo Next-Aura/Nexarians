@@ -79,7 +79,8 @@ Converges when coefficient changes < `tol`.
 | `fit_intercept`| `bool`  | `True`  | Add bias term                               |
 | `tol`          | `float` | `1e-4`  | Convergence tolerance                       |
 | `early_stopping`| `bool` | `True`  | Enable early stop on convergence            |
-| `verbose`      | `int`   | `0`     | 0 = silent, 1 = ~5 % progress, 2 = every iteration |
+| `verbose`      | `int`   |   `0`   | 0 = silent, 1 = ~5 % progress, 2 = every iteration |
+| `stoic_iter`   |  `int`  |  `10`   | Warm-up iter without tolerance              |
 
 ## Model Attributes (post-fit)
 
