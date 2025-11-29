@@ -98,6 +98,7 @@ MAE uses **sign**; RMSE normalizes by current RMSE; Smooth L1 conditional.
 | `factor` | `float` | `0.5` | LR reduction factor for plateau |
 | `delta` | `float` | `1.0` | Threshold for Smooth L1 loss |
 | `stoic_iter` | `int` | `10` | Warm-up epochs before early stop/scheduler |
+| `epsilon` | `float` | `1e-15` | Small value for numerical stability |
 
 ## Model Attributes (post-fit)
 
@@ -124,6 +125,8 @@ Trains via mini-batch gradient descent.
 Returns predicted class probabilities $\hat{p}$ for new samples.
 
 - **Raises** `ValueError` if model not fitted
+- **Raises** `OverflowError` if weights/bias/loss become Inf
+- **Raises** `RuntimeWarning` if there's a NaN value that clipped
 
 ### `predict(X_test)`
 Returns predicted class labels (argmax of probabilities).

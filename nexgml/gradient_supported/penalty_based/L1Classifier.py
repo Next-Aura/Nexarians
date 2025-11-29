@@ -3,6 +3,8 @@ import numpy as np                                     # For numerical computati
 from scipy.sparse import issparse, csr_matrix, hstack, spmatrix  # For sparse data handling
 import pandas as pd                                    # For DataFrame data handling
 from nexgml.indexing import one_hot_labeling           # For encoding utility
+from nexgml.metrics import accuracy_score              # For accuracy metric
+from nexgml.guardians import safe_array        # For numerical stability
 
 # ========== THE MODEL ==========
 class L1Classifier:
@@ -112,6 +114,8 @@ class L1Classifier:
 
         ## Raises:
             **ValueError**: *If input data contains NaN/Inf, if X is not 2D, or if dimensions mismatch.*
+            **OverflowError**: *If model parameters become infinity during training loop.*
+            **RuntimeWarning**: *If overflow is detected and values are clipped.*
         """
         # ========== Data Validation and Preprocessing ==========
         if issparse(X_train):
@@ -216,6 +220,12 @@ class L1Classifier:
             residual_mean = np.mean(residual)
             self.loss_history.append(residual_mean)
 
+            if np.any(np.isnan(w)):
+                w = safe_array(w)
+
+            if np.any(np.isinf(w)):
+                raise OverflowError("Model parameters became infinity during training.")
+
             # Level 1 verbose logging
             if self.verbose == 1 and ((iteration % max(1, self.max_iter // 20)) == 0 or iteration < 5):
                 print(f"Epoch {iteration + 1}/{self.max_iter}. Residual: {residual_mean:.6f}")
@@ -305,8 +315,9 @@ class L1Classifier:
         """
         # ========== PREDICTION ==========
         y_pred = self.predict(X_test)
-        # Compare prediction with true labels and compute mean
-        return np.mean(y_pred == y_test)
+        
+        # ========== ACCURACY CALCULATION ==========
+        return accuracy_score(y_test, y_pred)
     
     def get_params(self, deep=True) -> dict[str, object]:
         """

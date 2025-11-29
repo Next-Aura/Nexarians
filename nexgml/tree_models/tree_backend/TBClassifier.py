@@ -4,6 +4,7 @@ from typing import Literal, Optional          # More specific type hints
 from scipy.sparse import issparse, spmatrix   # For sparse matrix handling
 from nexgml.indexing import standard_indexing # For indexing utilities
 from nexgml.amo.fortree import gini_impurity, entropy_impurity, log_loss_impurity # For some math operations
+from nexgml.metrics import accuracy_score     # For accuracy metric
 
 # ========== THE MODEL ==========
 class TreeBackendClassifier:
@@ -508,8 +509,9 @@ class TreeBackendClassifier:
         """
         # ========== PREDICTION ==========
         y_pred = self.predict(X_test)
-        # Compare prediction with true labels and compute mean
-        return np.mean(y_pred == y_test)
+        
+        # ========== ACCURACY CALCULATION ==========
+        return accuracy_score(y_test, y_pred)
     
     def get_params(self, deep=True) -> dict[str, object]:
         """

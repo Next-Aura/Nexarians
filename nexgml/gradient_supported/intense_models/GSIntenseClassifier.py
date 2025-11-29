@@ -5,6 +5,8 @@ from typing import Literal, Optional           # More specific type hints
 from nexgml.amo import forlinear               # For specific numerical operations
 from nexgml.indexing import one_hot_labeling   # For one-hot labeling
 from warnings import warn                      # For warning messages
+from nexgml.metrics import accuracy_score      # For accuracy metric
+from nexgml.guardians import safe_array        # For numerical stability
 
 # ========== THE MODEL ==========
 class IntenseClassifier:
@@ -34,7 +36,8 @@ class IntenseClassifier:
         power_t: float=0.25, 
         patience: int=5, 
         factor: float=0.5, 
-        stoic_iter: int | None = 10
+        stoic_iter: int | None = 10,
+        epsilon: float=1e-15
             ):
         """
         Initialize the SoftIntenseClassifier model.
@@ -96,6 +99,9 @@ class IntenseClassifier:
 
             **stoic_iter**: *int or None, default=10*
             Number of initial epochs to skip before checking for convergence/tolerance in early stopping.
+            
+            **epsilon**: *float, default=1e-15*
+            Small value to avoid numerical instability in calculations.
 
         ## Returns:
             **None**
@@ -144,9 +150,9 @@ class IntenseClassifier:
         self.verbose = int(verbose)                # Verbosity level for training progress logging (0: silent, 1: progress)
         self.stoic_iter = int(stoic_iter)          # Warm-up iterations before applying early stopping and lr scheduler
         self.verbosity = str(verbosity)            # Verbosity level for logging
+        self.epsilon = float(epsilon)              # Small constant to prevent division by zero in computations
 
         # ========== INTERNAL VARIABLES ==========
-        self.epsilon = 1e-15                       # Small constant to prevent division by zero in computations
         self.weights = None                        # Model weights (coefficients) matrix of shape (n_features, n_classes)
         self.b = None                              # Bias term vector of shape (n_classes,)
         self.loss_history = []                     # List to store loss values for each training epoch
@@ -289,7 +295,7 @@ class IntenseClassifier:
         # Return softmax probabilities
 
     # ========= MAIN METHODS =========
-    def fit(self, X_train, y_train):
+    def fit(self, X_train: np.ndarray | spmatrix, y_train: np.ndarray) -> None:
         """
         Fit the model to the training data using mini-batch gradient descent.
         Supports multiple optimizers (MBGD, Adam, AdamW), learning rate schedules,
@@ -299,7 +305,7 @@ class IntenseClassifier:
             **X_train**: *np.ndarray or spmatrix*
             Training input features.
 
-            **y_train**: *np.ndarray or spmatrix*
+            **y_train**: *np.ndarray*
             Training target values.
             
         ## Returns:
@@ -307,6 +313,8 @@ class IntenseClassifier:
             
         ## Raises:
             **ValueError**: *If input data contains NaN/Inf, dimensions mismatch, or < 2 classes.*
+            **OverflowError**: *If numerical overflow occurs during training.*
+            **RuntimeWarning**: *If overflow is detected and values are clipped.*
         """
         # ========== DATA PREPROCESSING ==========
         if not issparse(X_train):
@@ -362,40 +370,40 @@ class IntenseClassifier:
             # Ensure at least 2 classes
             raise ValueError("Class label must have at least 2 types.")
         
+        # Initialize weights if needed
         if self.weights is None or self.weights.shape != (num_features, self.n_classes):
-            # Initialize weights if needed
-            self.weights = np.zeros((num_features, self.n_classes), dtype=np.float64)
             # Zero initialization for weights
-
-        if self.intercept and (self.b is None or self.b.shape != (self.n_classes,)):
-            # Initialize bias if needed
-            self.b = np.zeros(self.n_classes, dtype=np.float64)
-            # Zero initialization for bias
-
-        y_one_hot = one_hot_labeling(y_processed, self.classes)
-        # Data label one-hot transform
-
-        if self.optimizer in {'adam', 'adamw'}:
-            # Initialize Adam/AdamW moments if needed
-            self.m_w = np.zeros_like(self.weights)
-            # First moment for weights
-            self.v_w = np.zeros_like(self.weights)
-            # Second moment for weights
-            self.m_b = np.zeros_like(self.b) if self.intercept else None
-            # First moment for bias
-            self.v_b = np.zeros_like(self.b) if self.intercept else None
-            # Second moment for bias
+            self.weights = np.zeros((num_features, self.n_classes), dtype=np.float64)
         
-        rng = np.random.default_rng(self.random_state)
+        # Initialize bias if needed
+        if self.intercept and (self.b is None or self.b.shape != (self.n_classes,)):
+            # Zero initialization for bias
+            self.b = np.zeros(self.n_classes, dtype=np.float64)
+        
+        # Data label one-hot transform
+        y_one_hot = one_hot_labeling(y_processed, self.classes)
+        
+        # Initialize Adam/AdamW moments if needed
+        if self.optimizer in {'adam', 'adamw'}:
+            # First moment for weights
+            self.m_w = np.zeros_like(self.weights)
+            # Second moment for weights
+            self.v_w = np.zeros_like(self.weights)
+            # First moment for bias
+            self.m_b = np.zeros_like(self.b) if self.intercept else None
+            # Second moment for bias
+            self.v_b = np.zeros_like(self.b) if self.intercept else None
+        
         # Random number generator for shuffling
-        num_batches = int(np.ceil(num_samples / self.batch_size))
+        rng = np.random.default_rng(self.random_state)
         # Calculate number of batches
-        self.current_lr = self.learning_rate
+        num_batches = int(np.ceil(num_samples / self.batch_size))
         # Initialize current learning rate
-        self.best_loss = float('inf')
+        self.current_lr = self.learning_rate
         # Initialize best loss for early stopping
-        self.wait = 0
+        self.best_loss = float('inf')
         # Initialize wait counter for early stopping
+        self.wait = 0
         
         # ========== TRAINING LOOP ==========
         for i in range(self.max_iter):
@@ -439,107 +447,116 @@ class IntenseClassifier:
 
             # ========== DATA SHUFFLING ==========
             if self.shuffle:
-                indices = rng.permutation(num_samples)
                 # Generate random permutation indices
-                X_shuffled = X_processed[indices] if not issparse(X_processed) else X_processed[indices]
+                indices = rng.permutation(num_samples)
                 # Shuffle X
-                y_shuffled = y_one_hot[indices]
+                X_shuffled = X_processed[indices] if not issparse(X_processed) else X_processed[indices]
                 # Shuffle y
+                y_shuffled = y_one_hot[indices]
+            # No shuffling
             else:
                 X_shuffled = X_processed
-                # No shuffling
                 y_shuffled = y_one_hot
 
             # ========== BATCH PROCESSING ==========
             epoch_loss_sum = 0.0
             for j in range(num_batches):
-                s_idx = j * self.batch_size
                 # Start index for current batch
-                e_idx = min((j + 1) * self.batch_size, num_samples)
+                s_idx = j * self.batch_size
                 # End index for current batch
-                X_batch = X_shuffled[s_idx:e_idx]
+                e_idx = min((j + 1) * self.batch_size, num_samples)
                 # Extract batch features
-                y_batch = y_shuffled[s_idx:e_idx]
+                X_batch = X_shuffled[s_idx:e_idx]
                 # Extract batch labels
-                grad_w, grad_b, z_batch = self._calculate_grad(X_batch, y_batch)
+                y_batch = y_shuffled[s_idx:e_idx]
                 # Compute gradients for batch
+                grad_w, grad_b, z_batch = self._calculate_grad(X_batch, y_batch)
 
                 # ========== PARAMETER UPDATES ==========
                 if self.optimizer == 'mbgd':
-                    self.weights -= self.current_lr * grad_w
                     # Update weights using MBGD
+                    self.weights -= self.current_lr * grad_w
                     if self.intercept:
-                        self.b -= self.current_lr * grad_b
                         # Update bias using MBGD
+                        self.b -= self.current_lr * grad_b
 
                 elif self.optimizer == 'adam':
-                    t = i * num_batches + j + 1
                     # Time step for Adam
-                    self.m_w = self.beta1 * self.m_w + (1 - self.beta1) * grad_w
+                    t = i * num_batches + j + 1
                     # Update first moment for weights
-                    self.v_w = self.beta2 * self.v_w + (1 - self.beta2) * (grad_w**2)
+                    self.m_w = self.beta1 * self.m_w + (1 - self.beta1) * grad_w
                     # Update second moment for weights
-                    m_w_hat = self.m_w / (1 - self.beta1**t)
+                    self.v_w = self.beta2 * self.v_w + (1 - self.beta2) * (grad_w**2)
                     # Bias-corrected first moment
-                    v_w_hat = self.v_w / (1 - self.beta2**t)
+                    m_w_hat = self.m_w / (1 - self.beta1**t)
                     # Bias-corrected second moment
-                    self.weights -= self.current_lr * m_w_hat / (np.sqrt(v_w_hat) + self.epsilon)
+                    v_w_hat = self.v_w / (1 - self.beta2**t)
                     # Update weights
+                    self.weights -= self.current_lr * m_w_hat / (np.sqrt(v_w_hat) + self.epsilon)
 
                     if self.intercept:
-                        self.m_b = self.beta1 * self.m_b + (1 - self.beta1) * grad_b
                         # Update first moment for bias
-                        self.v_b = self.beta2 * self.v_b + (1 - self.beta2) * (grad_b**2)
+                        self.m_b = self.beta1 * self.m_b + (1 - self.beta1) * grad_b
                         # Update second moment for bias
-                        m_b_hat = self.m_b / (1 - self.beta1**t)
+                        self.v_b = self.beta2 * self.v_b + (1 - self.beta2) * (grad_b**2)
                         # Bias-corrected first moment
-                        v_b_hat = self.v_b / (1 - self.beta2**t)
+                        m_b_hat = self.m_b / (1 - self.beta1**t)
                         # Bias-corrected second moment
-                        self.b -= self.current_lr * m_b_hat / (np.sqrt(v_b_hat) + self.epsilon)
+                        v_b_hat = self.v_b / (1 - self.beta2**t)
                         # Update bias
+                        self.b -= self.current_lr * m_b_hat / (np.sqrt(v_b_hat) + self.epsilon)
                 elif self.optimizer == 'adamw':
-                    t = i * num_batches + j + 1
                     # Time step for AdamW
-                    self.m_w = self.beta1 * self.m_w + (1 - self.beta1) * grad_w
+                    t = i * num_batches + j + 1
                     # Update first moment for weights
-                    self.v_w = self.beta2 * self.v_w + (1 - self.beta2) * (grad_w**2)
+                    self.m_w = self.beta1 * self.m_w + (1 - self.beta1) * grad_w
                     # Update second moment for weights
-                    m_w_hat = self.m_w / (1 - self.beta1**t)
+                    self.v_w = self.beta2 * self.v_w + (1 - self.beta2) * (grad_w**2)
                     # Bias-corrected first moment
-                    v_w_hat = self.v_w / (1 - self.beta2**t)
+                    m_w_hat = self.m_w / (1 - self.beta1**t)
                     # Bias-corrected second moment
-                    self.weights -= self.current_lr * m_w_hat / (np.sqrt(v_w_hat) + self.epsilon)
+                    v_w_hat = self.v_w / (1 - self.beta2**t)
                     # Update weights
+                    self.weights -= self.current_lr * m_w_hat / (np.sqrt(v_w_hat) + self.epsilon)
 
                     if self.penalty == "l2":
-                        self.weights -= self.current_lr * self.alpha * self.weights
                         # Apply L2 weight decay
+                        self.weights -= self.current_lr * self.alpha * self.weights
 
                     if self.intercept:
-                        self.m_b = self.beta1 * self.m_b + (1 - self.beta1) * grad_b
                         # Update first moment for bias
-                        self.v_b = self.beta2 * self.v_b + (1 - self.beta2) * (grad_b**2)
+                        self.m_b = self.beta1 * self.m_b + (1 - self.beta1) * grad_b
                         # Update second moment for bias
-                        m_b_hat = self.m_b / (1 - self.beta1**t)
+                        self.v_b = self.beta2 * self.v_b + (1 - self.beta2) * (grad_b**2)
                         # Bias-corrected first moment
-                        v_b_hat = self.v_b / (1 - self.beta2**t)
+                        m_b_hat = self.m_b / (1 - self.beta1**t)
                         # Bias-corrected second moment
-                        self.b -= self.current_lr * m_b_hat / (np.sqrt(v_b_hat) + self.epsilon)
+                        v_b_hat = self.v_b / (1 - self.beta2**t)
                         # Update bias
-                else:
-                    raise ValueError(f"Optimizer '{self.optimizer}' not supported.")
+                        self.b -= self.current_lr * m_b_hat / (np.sqrt(v_b_hat) + self.epsilon)
 
                 # ========== BATCH LOSS COMPUTATION ==========
-                y_proba_batch = forlinear.softmax(z_batch)
                 # Compute softmax probabilities
-                epoch_loss_sum += self._calculate_loss(y_batch, y_proba_batch)
+                y_proba_batch = forlinear.softmax(z_batch)
                 # Accumulate batch loss
+                epoch_loss_sum += self._calculate_loss(y_batch, y_proba_batch)
 
             # ========== EPOCH LOSS AND LOGGING ==========
             # Average loss over all batches
             avg_epoch_loss = epoch_loss_sum / num_batches
             # Store epoch loss
             self.loss_history.append(avg_epoch_loss)
+
+            # Check for NaN/Inf during training loop
+            if not np.all(np.isfinite(self.weights)) or (self.intercept and not np.all(np.isfinite(self.b))):
+                self.weights = safe_array(self.weights)
+                
+                if self.intercept:
+                    self.b = safe_array(self.b)
+
+            # Check loss for NaN/Inf during training loop
+            if not np.isfinite(avg_epoch_loss):
+                raise OverflowError(f"Loss became NaN/Inf at epoch {i + 1}. Stopping training early.")
 
             # Light verbose logging
             if self.verbose == 1 and ((i % max(1, self.max_iter // 20)) == 0 or i < 5) and self.verbosity == 'light':
@@ -574,14 +591,14 @@ class IntenseClassifier:
         ## Raises:
             **ValueError**: *If model is not trained (propagated from predict_proba).*
         """
-        probas = self.predict_proba(X_test)
         # Get predicted probabilities
-        pred_class = np.argmax(probas, axis=1)
+        probas = self.predict_proba(X_test)
         # Choose class with highest probability
+        pred_class = np.argmax(probas, axis=1)
 
         if self.classes is not None and len(self.classes) == self.n_classes:
-            pred_class = np.array([self.classes[idx] for idx in pred_class])
             # Map indices to original classes
+            pred_class = np.array([self.classes[idx] for idx in pred_class])
         return pred_class
     
     def score(self, X_test: np.ndarray | spmatrix, y_test: np.ndarray) -> float:
@@ -603,8 +620,9 @@ class IntenseClassifier:
         """
         # ========== PREDICTION ==========
         y_pred = self.predict(X_test)
-        # Compare prediction with true labels and compute mean
-        return np.mean(y_pred == y_test)
+        
+        # ========== ACCURACY CALCULATION ==========
+        return accuracy_score(y_test, y_pred)
     
     def get_params(self, deep=True) -> dict[str, object]:
         """
@@ -632,13 +650,15 @@ class IntenseClassifier:
             "random_state": self.random_state,
             "early_stopping": self.early_stop,
             "verbose": self.verbose,
+            "verbosity": self.verbosity,
             "lr_scheduler": self.lr_scheduler,
             "optimizer": self.optimizer,
             "batch_size": self.batch_size,
             "power_t": self.power_t,
             "patience": self.patience,
             "factor": self.factor,
-            "stoic_iter": self.stoic_iter
+            "stoic_iter": self.stoic_iter,
+            "epsilon": self.epsilon
         }
 
     def set_params(self, **params) -> 'IntenseClassifier':

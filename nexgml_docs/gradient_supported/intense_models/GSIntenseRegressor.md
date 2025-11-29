@@ -92,6 +92,7 @@ MAE uses the **sign** function; RMSE normalises by the current RMSE value; Smoot
 | `factor` | `float` | `0.5` | LR reduction factor for plateau |
 | `delta` | `float` | `0.5` | Threshold for Smooth L1 loss |
 | `stoic_iter` | `int` | `10` | Warm-up epochs before early stop/scheduler |
+| `epsilon` | `float` | `1e-15` | Small value for numerical stability |
 
 ## Model Attributes (post-fit)
 
@@ -111,6 +112,7 @@ Trains via mini-batch gradient descent.
 
 - **Raises** `ValueError` for NaN/Inf, shape mismatch, invalid params  
 - **Raises** `OverflowError` if weights/bias become NaN/Inf
+- **Raises** `RuntimeWarning` if there's a NaN value that clipped
 
 ### `predict(X_test)`
 Returns $\hat{y}$ for new samples.

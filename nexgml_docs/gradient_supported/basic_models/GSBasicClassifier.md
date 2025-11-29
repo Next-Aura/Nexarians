@@ -88,7 +88,7 @@ Supports class weighting for imbalanced data.
 | `patience` | `int` | `5` | Epochs to wait for plateau |
 | `factor` | `float` | `0.5` | LR reduction factor for plateau |
 | `stoic_iter` | `int` | `10` | Warm-up epochs before early stop/scheduler |
-
+| `epsilon` | `float` | `1e-15` | Small value for numerical stability |
 
 ## Model Attributes (post-fit)
 
@@ -110,6 +110,7 @@ Trains via gradient descent.
 
 - **Raises** `ValueError` for NaN/Inf or shape mismatch  
 - **Raises** `OverflowError` if weights/bias become NaN/Inf
+- **Raises** `RuntimeWarning` if there's a NaN value that clipped
 
 ### `predict_proba(X_test)`
 Returns predicted class probabilities $\hat{p}$ for new samples.

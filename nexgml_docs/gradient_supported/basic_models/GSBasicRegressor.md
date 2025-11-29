@@ -84,6 +84,7 @@ MAE uses the **sign** function; RMSE normalises by the current RMSE value.
 | `patience` | `int` | `5` | Epochs to wait for plateau |
 | `factor` | `float` | `0.5` | LR reduction factor for plateau |
 | `stoic_iter` | `int` | `10` | Warm-up epochs before early stop/scheduler |
+| `epsilon` | `float` | `1e-15` | Small value for numerical stability |
 
 ## Model Attributes (post-fit)
 

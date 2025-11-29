@@ -88,6 +88,7 @@ $$
 | `patience` | `int` | `5` | Epochs to wait for plateau |
 | `factor` | `float` | `0.5` | LR reduction factor for plateau |
 | `stoic_iter` | `int` | `10` | Warm-up epochs before early stop/scheduler |
+| `epsilon` | `float` | `1e-15` | Small value for numerical stability |
 
 ## Model Attributes (post-fit)
 
@@ -108,6 +109,8 @@ Creates the model with the hyper-parameters above.
 Trains via mini-batch gradient descent.
 
 - **Raises** `ValueError` for NaN/Inf, shape mismatch, invalid params, or <2 classes
+- **Raises** `OverflowError` if weights/bias/loss become Inf
+- **Raises** `RuntimeWarning` if there's a NaN value that clipped
 
 ### `predict_proba(X_test)`
 Returns predicted class probabilities $\hat{p}$ for new samples.

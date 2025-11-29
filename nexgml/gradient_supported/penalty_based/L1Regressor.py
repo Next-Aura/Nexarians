@@ -2,6 +2,8 @@
 import numpy as np                                     # For numerical computations
 from scipy.sparse import issparse, csr_matrix, hstack, spmatrix  # For sparse matrix handling
 import pandas as pd                                    # For DataFrame data support
+from nexgml.metrics import r2_score                    # For R2 score calculation
+from nexgml.guardians import safe_array                # For numerical stability
 
 # ========== THE MODEL ==========
 class L1Regressor:
@@ -94,6 +96,8 @@ class L1Regressor:
 
         ## Raises:
             **ValueError**: *If input data contains NaN/Inf or if dimensions mismatch.*
+            **OverflowError**: *If model parameters become infinity during training loop.*
+            **RuntimeWarning**: *If overflow is detected and values are clipped.*
         """
         # Handle pandas inputs and ensure numpy arrays for dense, keep sparse as sparse
         if 'pandas' in str(type(X_train)):
@@ -203,6 +207,13 @@ class L1Regressor:
             residual_mean = np.mean(residual)
             self.loss_history.append(residual_mean)
 
+            if np.any(np.isnan(w)):
+                w = safe_array(w)
+
+            if np.any(np.isinf(w)):
+                raise OverflowError("Model parameters became infinity during training.")
+
+
             # Level 1 verbose logging
             if self.verbose == 1 and ((iteration % max(1, self.max_iter // 20)) == 0 or iteration < 5):
                 print(f"Epoch {iteration + 1}/{self.max_iter}. Residual: {residual_mean:.6f}")
@@ -286,9 +297,9 @@ class L1Regressor:
         """
         # ========== PREDICTION ==========
         y_pred = self.predict(X_test)
-        u = ((y_test - y_pred) ** 2).sum()
-        v = ((y_test - y_test.mean()) ** 2).sum()
-        return 1 - u / v if v != 0 else 0.0
+        
+        # ========== R2 SCORE CALCULATION ==========
+        return r2_score(y_test, y_pred)
     
     def get_params(self, deep=True) -> dict[str, object]:
         """

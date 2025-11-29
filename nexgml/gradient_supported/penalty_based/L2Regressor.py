@@ -2,6 +2,7 @@
 import numpy as np                           # For numerical computations
 from scipy.sparse import issparse, spmatrix  # For sparse data handling
 import pandas as pd                          # For DataFrame data handling
+from nexgml.metrics import r2_score          # For R2 score calculation
 
 # ========== THE MODEL ==========
 class L2Regressor:
@@ -206,9 +207,9 @@ class L2Regressor:
         """
         # ========== PREDICTION ==========
         y_pred = self.predict(X_test)
-        u = ((y_test - y_pred) ** 2).sum()
-        v = ((y_test - y_test.mean()) ** 2).sum()
-        return 1 - u / v if v != 0 else 0.0
+        
+        # ========== R2 SCORE CALCULATION ==========
+        return r2_score(y_test, y_pred)
     
     def get_params(self, deep=True) -> dict[str, object]:
         """

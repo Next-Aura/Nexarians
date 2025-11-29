@@ -4,6 +4,8 @@ from typing import Optional, Literal             # More specific type hints
 from scipy.sparse import spmatrix, issparse      # For sparse matrix handling
 from nexgml.tree_models.tree_backend.TBRegressor import TreeBackendRegressor  # Estimator model
 from nexgml.indexing import standard_indexing    # For indexing utilities
+from nexgml.metrics import r2_score              # For R2 score calculation
+
 
 # ========== THE MODEL ==========
 class ForestBackendRegressor:
@@ -260,9 +262,9 @@ class ForestBackendRegressor:
         """
         # ========== PREDICTION ==========
         y_pred = self.predict(X_test)
-        u = ((y_test - y_pred) ** 2).sum()
-        v = ((y_test - y_test.mean()) ** 2).sum()
-        return 1 - u / v if v != 0 else 0.0
+        
+        # ========== R2 SCORE CALCULATION ==========
+        return r2_score(y_test, y_pred)
     
     def get_params(self, deep=True) -> dict[str, object]:
         """

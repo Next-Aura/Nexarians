@@ -100,6 +100,7 @@ Creates the model with the hyper-parameters above.
 Fits using Coordinate Descent.
 
 - **Raises** `ValueError` for NaN/Inf or shape mismatch
+- **Raises** `RuntimeWarning` if there's a NaN value that clipped
 
 ### `predict(X_test)`
 Returns predicted class labels (argmax of scores).
