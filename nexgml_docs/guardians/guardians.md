@@ -15,6 +15,13 @@ import numpy as np
 from nexgml.guardians import safe_array
 ```
 
+or
+
+```python
+import numpy as np
+from nexgml import guardians as grd
+```
+
 ## `Guardians` API Reference
 
 This module provides static methods for robust and safe numerical array operations.
@@ -34,11 +41,29 @@ Safely convert array to finite numbers within specified bounds.
   * **Raises**:
       * `RuntimeWarning`: Warns if any values were clipped due to overflow.
 
+### `hasinf(arr)`
+
+Check if there's an infinity value in an object.
+
+  * **Parameters**:
+      * `arr` (`np.ndarray, list, spmatrix`): Input to be processed.
+  * **Returns**:
+      * (`bool`): Condition if there's an infinity value.
+
+### `hasnan(arr)`
+
+Check if there's an infinity value in an object.
+
+  * **Parameters**:
+      * `arr` (`np.ndarray, list, spmatrix`): Input to be processed.
+  * **Returns**:
+      * (`bool`): Condition if there's a NaN.
+
 ## Usage Examples
 
 ```python
 import numpy as np
-from nexgml.guardians import safe_array
+from nexgml.guardians import safe_array, hasinf, hasnan
 
 # Example with problematic array
 problematic_array = np.array([1.0, np.nan, np.inf, -np.inf, 1e15, -1e15])
@@ -47,7 +72,11 @@ print("Original array:", problematic_array)
 
 # Process with safe_array
 safe_arr = safe_array(problematic_array)
+has_inf = hasinf(problematic_array)
+has_nan = hasnan(problematic_array)
 print("Safe array:", safe_arr)
+print("Has infinity:", has_inf)
+print("Has nan:", has_nan)
 # Output: [ 1.00000000e+00  0.00000000e+00  1.00000000e+10 -1.00000000e+10  1.00000000e+10 -1.00000000e+10]
 # Note: RuntimeWarning may be issued if clipping occurs
 
@@ -59,4 +88,4 @@ print("Custom bounds safe array:", custom_safe_arr)
 
 ## Performance Note
 
-all the functions along with NumPy computation. This results in C-like speed for all calculations, which is critical when these functions are called millions of times inside a model's training loop.
+All the functions along with NumPy computation. This results in C-like speed for all calculations, which is critical when these functions are called millions of times inside a model's training loop.
