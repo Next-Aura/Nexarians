@@ -10,6 +10,7 @@ A collection of educational ML implementations.
   - **tree_models**
   - **indexing**
   - **amo (Advanced Math Operations)**
+  - **metrics**
 
 ## See also:
   - **scikit-learn**
@@ -20,10 +21,10 @@ A collection of educational ML implementations.
   the discord server will provide AI related news, off-topic channel, and more!.**
 
 ### Version:
-  **1.2.0**
+  **1.3.0**
 """
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 
 __all__ = [
     "__version__",

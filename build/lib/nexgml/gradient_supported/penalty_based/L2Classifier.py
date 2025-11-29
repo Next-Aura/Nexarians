@@ -3,6 +3,7 @@ import numpy as np                           # For numerical computations
 from scipy.sparse import issparse, spmatrix  # For sparse data handling
 import pandas as pd                          # For DataFrame data handling
 from nexgml.indexing import one_hot_labeling # For encoding utility
+from nexgml.metrics import accuracy_score    # For accuracy metric
 
 # ========== THE MODEL ==========
 class L2Classifier:
@@ -212,8 +213,9 @@ class L2Classifier:
         """
         # ========== PREDICTION ==========
         y_pred = self.predict(X_test)
-        # Compare prediction with true labels and compute mean
-        return np.mean(y_pred == y_test)
+        
+        # ========== ACCURACY CALCULATION ==========
+        return accuracy_score(y_test, y_pred)
 
     def get_params(self, deep=True) -> dict[str, object]:
         """

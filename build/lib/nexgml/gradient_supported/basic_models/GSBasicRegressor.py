@@ -4,6 +4,8 @@ from scipy.sparse import issparse, spmatrix  # For sparse matrix handling
 from typing import Literal, Optional         # More specific type hints
 from nexgml.amo import forlinear             # For specific computation operations
 from warnings import warn                    # For warning messages
+from nexgml.metrics import r2_score          # For R2 score calculation
+from nexgml.guardians import safe_array      # For numerical stability
 
 # ========== THE MODEL ==========
 class BasicRegressor:
@@ -30,7 +32,8 @@ class BasicRegressor:
             power_t: float=0.25,
             patience: int=5,
             factor: float=0.5,
-            stoic_iter: int | None = 10
+            stoic_iter: int | None = 10,
+            epsilon: float=1e-15
             ):
         """
         Initialize the BasicRegressor model.
@@ -89,6 +92,9 @@ class BasicRegressor:
             
             **stoic_iter**: *int or None, default=10*
             Number of initial epochs to skip before checking for convergence/tolerance in early stopping.
+            
+            **epsilon**: *float, default=1e-15*
+            Small value to avoid numerical instability in calculations.
 
         ## Returns:
             **None**
@@ -121,6 +127,7 @@ class BasicRegressor:
         self.verbosity = str(verbosity)            # Verbosity level for logging
         self.intercept = bool(fit_intercept)       # Fit intercept (bias) or not
         self.random_state = random_state           # Random state for reproducibility
+        self.epsilon = float(epsilon)              # For numerical stability
 
         self.tol = float(tol)                      # Training loss tolerance for early stopping
         self.shuffle = bool(shuffle)               # Data shuffling
@@ -137,7 +144,6 @@ class BasicRegressor:
         self.current_lr = None                     # Current epoch learning rate
         self.best_loss = float('inf')              # Best loss achieved (used for plateau scheduler)
         self.wait = 0                              # Counter for epochs without improvement (plateau scheduler)
-        self.epsilon = 1e-15                       # For numerical stability
 
         self.loss_history = []                     # Store loss per-iteration
         self.weights = None                        # Moddel weight
@@ -262,7 +268,8 @@ class BasicRegressor:
             
         ## Raises:
             **ValueError**: *If input data contains NaN/Inf or if dimensions mismatch.*
-            **OverflowError**: *If parameters (weight, bias or loss) become infinity or NaN during training loop.*
+            **OverflowError**: *If parameters (weight, bias, loss) become infinity during training loop.*
+            **RuntimeWarning**: *If overflow is detected during training process.*
             """
         # Check if non-sparse data is 1D and reshape to 2D if is it
         if not issparse(X_train):
@@ -384,17 +391,27 @@ class BasicRegressor:
             
             # Calculate current iteration loss
             loss = self._calculate_loss(y_processed, pred)
+
+            if np.isnan(loss):
+                loss = safe_array(loss)
             
             # Store the calculated curent iteration loss
             self.loss_history.append(loss)
+
+            # Check if weight and bias not become a NaN and infinity during training loop
+            if np.any(np.isnan(self.weights)) or np.any(np.isinf(self.weights)) or np.isnan(self.b) or np.isinf(self.b):
+                self.weights = safe_array(self.weights)
+
+                if self.intercept:
+                    self.b = safe_array(self.b)
             
             # Check if weight and bias not become an infinite during training loop
             if not np.all(np.isfinite(self.weights)) or (self.intercept and not np.isfinite(self.b)):
                 raise OverflowError(f"Weights or bias became NaN/Inf at epoch {i + 1}. Stopping training early.")
-            
-            # Check if weight and bias not become a NaN and infinity during training loop
-            if np.any(np.isnan(self.weights)) or np.any(np.isinf(self.weights)) or np.isnan(self.b) or np.isinf(self.b):
-                raise OverflowError(f"There's NaN in epoch {i + 1} during the training process")
+
+            # Check loss for NaN/Inf during training loop
+            if not np.isfinite(loss):
+                raise OverflowError(f"Loss became NaN/Inf at epoch {i + 1}. Stopping training early.")
             
             # Verbose with light verbosity for training loop logging
             if self.verbose == 1 and ((i % max(1, self.max_iter // 20)) == 0 or i < 5) and self.verbosity == 'light':
@@ -410,10 +427,14 @@ class BasicRegressor:
             elif self.verbose == 2 and self.verbosity == 'heavy':
                 print(f"Epoch {i+1}/{self.max_iter}. Loss: {loss:.8f}, Avg Weights: {np.mean(self.weights):.8f}, Avg Bias: {self.b:.8f}, Current LR: {self.current_lr:.8f}")
             
-            # Early stopping based on loss convergence
-            if self.early_stop and i > 1 and i > self.stoic_iter:
+            # ========== EARLY STOPPING ==========
+            if self.early_stop and i > self.stoic_iter:
                 if abs(self.loss_history[-1] - self.loss_history[-2]) < self.tol:
-                  break
+                    break 
+                
+                if i > 2 * self.stoic_iter:
+                    if abs(np.mean(self.loss_history[-self.stoic_iter:]) - np.mean(self.loss_history[-2*self.stoic_iter:-self.stoic_iter])) < self.tol:
+                        break
 
     def predict(self, X_test: np.ndarray) -> np.ndarray:
         """
@@ -465,9 +486,9 @@ class BasicRegressor:
         """
         # ========== PREDICTION ==========
         y_pred = self.predict(X_test)
-        u = ((y_test - y_pred) ** 2).sum()
-        v = ((y_test - y_test.mean()) ** 2).sum()
-        return 1 - u / v if v != 0 else 0.0
+        
+        # ========== R2 SCORE CALCULATION ==========
+        return r2_score(y_test, y_pred)
 
     def get_params(self, deep=True) -> dict[str, object]:
         """
@@ -496,11 +517,13 @@ class BasicRegressor:
             "random_state": self.random_state,
             "early_stopping": self.early_stop,
             "verbose": self.verbose,
+            "verbosity": self.verbosity,
             "lr_scheduler": self.lr_scheduler,
             "power_t": self.power_t,
             "patience": self.patience,
             "factor": self.factor,
-            "stoic_iter": self.stoic_iter
+            "stoic_iter": self.stoic_iter,
+            "epsilon": self.epsilon
         }
 
     def set_params(self, **params) -> "BasicRegressor":

@@ -1,15 +1,16 @@
 """*Gradient Supported* module provided linear model that use gradient methods for training.
+  
   ## Provides
-  - **basic_models**: *Simple implementation of gradient descend model.*
-  - **intense_models**: *Advanced implementation of gradient descend model.*
-  - **penalty_based**: *Regulation-based model that use penalty formula for training model.*
-  - **regression_based**: *Focused on classifier model that use regression function for training.*
+    - **basic_models**: *Simple implementation of gradient descend model.*
+    - **intense_models**: *Advanced implementation of gradient descend model.*
+    - **penalty_based**: *Regulation-based model that use penalty formula for training model.*
+    - **regression_based**: *Focused on classifier model that use regression function for training.*
 
   ## See also:
-  - **tree_models**
+    - **tree_models**
 
   ## Note:
-  **All the models implemented in python programming language.**
+    **All the models implemented in python programming language.**
 """
 from .basic_models.GSBasicRegressor import BasicRegressor
 from .basic_models.GSBasicClassifier import BasicClassifier

@@ -4,6 +4,7 @@ from typing import Optional, Literal              # More specific type hints
 from scipy.sparse import spmatrix, issparse       # For sparse matrix handling
 from nexgml.tree_models.tree_backend.TBClassifier import TreeBackendClassifier  # Estimator model
 from nexgml.indexing import standard_indexing     # For indexing utilities
+from nexgml.metrics import accuracy_score         # For accuracy metric
 
 # ========== THE MODEL ==========
 class ForestBackendClassifier:
@@ -322,8 +323,9 @@ class ForestBackendClassifier:
         """
         # ========== PREDICTION ==========
         y_pred = self.predict(X_test)
-        # Compare prediction with true labels and compute mean
-        return np.mean(y_pred == y_test)
+        
+        # ========== ACCURACY CALCULATION ==========
+        return accuracy_score(y_test, y_pred)
     
     def get_params(self, deep=True) -> dict[str, object]:
         """

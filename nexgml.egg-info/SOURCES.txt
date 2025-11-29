@@ -33,9 +33,15 @@ nexgml/gradient_supported/penalty_based/__init__.py
 nexgml/gradient_supported/regression_based/MRClassifier.py
 nexgml/gradient_supported/regression_based/SRClassifier.py
 nexgml/gradient_supported/regression_based/__init__.py
+nexgml/guardians/__init__.py
+nexgml/guardians/arr.py
+nexgml/guardians/detect.py
 nexgml/indexing/__init__.py
 nexgml/indexing/encoding.py
 nexgml/indexing/indexing.py
+nexgml/metrics/__init__.py
+nexgml/metrics/forclassi.py
+nexgml/metrics/forregress.py
 nexgml/tree_models/__init__.py
 nexgml/tree_models/forest_backend/FBClassifier.py
 nexgml/tree_models/forest_backend/FBRegressor.py

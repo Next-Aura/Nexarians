@@ -1,16 +1,16 @@
 """*ForLinear* module provides common calculation in machine learning.
   ## Provides:
-  - **losses**: *Focused on losses computations.*
-  - **probas**: *Focused on probability computations.*
-  - **fortree**: *sub-amo that focus on tree models computations.*
-  - **penalties**: *Focused on penalties computations.*
-  - **derivs**: *Focused on linear function derivative computations.*
+    - **losses**: *Focused on losses computations.*
+    - **probas**: *Focused on probability computations.*
+    - **fortree**: *sub-amo that focus on tree models computations.*
+    - **penalties**: *Focused on penalties computations.*
+    - **derivs**: *Focused on linear function derivative computations.*
   
   ## See also:
-  - **fortree**
+    - **fortree**
   
   ## Notes:
-  **All the helpers implemented in python programming language.**"""
+    **All the helpers implemented in python programming language.**"""
 
 from .losses import (mean_squared_error, 
                      mean_absolute_error, 

@@ -1,12 +1,12 @@
 """*ForTree* module provides common machine learning calculation in tree models.
   ## Provides:
-  - **impurity**: *Focused on label impurity computations.*
+    - **impurity**: *Focused on label impurity computations.*
   
   ## See also:
-  - **forlinear**
+    - **forlinear**
   
   ## Note:
-  **All the helpers implemented in python programming language.**"""
+    **All the helpers implemented in python programming language.**"""
 
 from .impurity import (squared_error,
                        friedman_squared_error,

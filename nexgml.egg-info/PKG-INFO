@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: nexgml
-Version: 1.2.0
+Version: 1.3.0
 Summary: NexGML — Next Generation Machine Learning (educational ML utilities)
 Author: Nexo-kun
 Author-email: nexokun.contact@gmail.com
@@ -34,7 +34,7 @@ pip install nexgml
 NexGML is a custom Machine Learning utility built for educational and research purposes, emphasizing **code transparency** and **high performance**.
 
 ### Key Features & Technology Stack
-  * **Modular Helpers:** Separates complex logic into focused helper modules (`ForLinear`, `ForTree`, `Indexing`) for easy customization.
+  * **Modular Helpers:** Separates complex logic into focused helper modules (`ForLinear`, `ForTree`, `Indexing`, `Metrics`, `Guardians`) for easy customization.
   * **Sparse Data Ready:** Full support for `scipy.sparse` matrices (CSR/CSC) for memory efficiency.
 
 -----
@@ -92,6 +92,8 @@ These modules contain the high-speed math used internally.
 | `nexgml.amo.forlinear` | **Linear Criteria.** Activation/Loss functions (Softmax, CCE, RMSE). | `forlinear.softmax(logits)` |
 | `nexgml.amo.fortree` | **Tree Criteria.** Impurity measures (Gini, Entropy, Friedman MSE). | `fortree.gini_impurity(labels)` |
 | `nexgml.indexing` | **Data Utilities.** One-hot encoding, smart feature slicing (`standard_indexing`). | `indexing.standard_indexing(n_features, 'sqrt')` |
+| `nexgml.metrics` | **Model Metrics.** Regressor and classifier models metrics computation (R^2, F1, Accuracy Score) | `accuracy_score(y_true, pred)` |
+| `nexgml.guardians` | **Numerical stability**. Value clipping, invalid value detecting (safe_array, hasinf, hasnan) | `safe_array(array)` |
 
 ## 📝 Documentation & Exploration
 

@@ -2,6 +2,8 @@
 import numpy as np                           # For numerical computations
 from scipy.sparse import issparse, spmatrix  # For sparse data handling
 import pandas as pd                          # For DataFrame data handling
+from nexgml.metrics import r2_score          # For R2 score calculation
+from nexgml.guardians import safe_array      # For numerical stability
 
 # ========== THE MODEL ==========
 class ElasticNetRegressor:
@@ -16,7 +18,8 @@ class ElasticNetRegressor:
                  fit_intercept: bool=True,
                  tol: float=1e-4,
                  early_stopping: bool=True,
-                 verbose: int=0) -> None:
+                 verbose: int=0,
+                 stoic_iter: int=10) -> None:
         """
         Initialize the ElasticNetRegressor model.
 
@@ -42,6 +45,9 @@ class ElasticNetRegressor:
             **verbose**: *int, default=0*
             Verbosity level (0: no output, 1: some output, 2: detailed output).
 
+            **stoic_iter**: *int, default=10*
+            Number of initial epochs to skip before checking for convergence/tolerance in early stopping.
+
         ## Returns:
           **None**
 
@@ -56,6 +62,7 @@ class ElasticNetRegressor:
         self.tol = float(tol)                      # Training loss tolerance
         self.l1_ratio = float(l1_ratio)            # Elastic net mixing ratio
         self.early_stop = bool(early_stopping)     # Early stopping flag
+        self.stoic_iter = int(stoic_iter)          # Warm-up iterations before applying early stopping
 
         self.weights = None                        # Model weights
         self.b = None                              # Model bias
@@ -114,6 +121,8 @@ class ElasticNetRegressor:
 
         ## Raises:
             **ValueError**: *If input data contains NaN/Inf or if dimensions mismatch.*
+            **OverflowError**: *If model parameters become infinity during training loop.*
+            **RuntimeWarning**: *If overflow is detected and values are clipped.*
         """
         if issparse(X_train):
             if not np.all(np.isfinite(X_train.data)) or not np.all(np.isfinite(y_train)):
@@ -174,6 +183,12 @@ class ElasticNetRegressor:
                 residual_mean = np.mean(residual)
                 self.loss_history.append(residual_mean)
 
+                if np.any(np.isnan(w)):
+                    w = safe_array(w)
+
+                if np.any(np.isinf(w)):
+                    raise OverflowError("Model parameters became infinity during training.")
+
                 # Level 1 verbose logging
                 if self.verbose == 1 and ((iteration % max(1, self.max_iter // 20)) == 0 or iteration < 5):
                     print(f"Epoch {iteration + 1}/{self.max_iter}. Residual: {residual_mean:.6f}")
@@ -183,8 +198,15 @@ class ElasticNetRegressor:
                     print(f"Epoch {iteration + 1}/{self.max_iter}. Residual: {residual_mean:.8f}")
 
 
-                if abs(np.mean(w - w_old)) < self.tol and self.early_stop:
-                    break
+                # ========== EARLY STOPPING ==========
+                if self.early_stop and iteration > self.stoic_iter:
+                    if abs(self.loss_history[-1] - self.loss_history[-2]) < self.tol:
+                        break 
+                    
+                    if iteration > 2 * self.stoic_iter:
+                        if abs(np.mean(self.loss_history[-self.stoic_iter:]) - np.mean(self.loss_history[-2*self.stoic_iter:-self.stoic_iter])) < self.tol:
+                            break
+
 
             self.weights[:, k] = w
 
@@ -257,9 +279,9 @@ class ElasticNetRegressor:
         """
         # ========== PREDICTION ==========
         y_pred = self.predict(X_test)
-        u = ((y_test - y_pred) ** 2).sum()
-        v = ((y_test - y_test.mean()) ** 2).sum()
-        return 1 - u / v if v != 0 else 0.0
+        
+        # ========== R2 SCORE CALCULATION ==========
+        return r2_score(y_test, y_pred)
     
     def get_params(self, deep=True) -> dict[str, object]:
         """
