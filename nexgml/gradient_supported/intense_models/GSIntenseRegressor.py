@@ -17,6 +17,80 @@ class IntenseRegressor:
     It supports L1, L2, and Elastic Net regularization, along with learning 
     rate scheduling and early stopping to optimize training.
     Handles both dense and sparse input matrices.
+
+    ## Attrs:
+      **weights**: *np.ndarray*
+      An array that stored features weight with shape (n_feature,).
+
+      **b**: *float*
+      A float that is a bias model bias for flexibility output.
+
+      **loss_history**: list[float,...]
+      A list that stored loss from all iteration, loss_history is plot-able.
+
+      **current_lr**: *None* (when model not trained, if model is trained the type is 'float')
+      Current iteration learning rate.
+
+      **best_loss**: *float*
+      Store best loss from model training progress, used for 'plateau' lr_scheduler mechanism.
+
+      **wait**: *int*
+      Patience counter for 'plateau' lr_scheduler.
+
+      ### If Adam or AdamW optimizer is used:
+        **m_w**: *np.ndarray*
+        Store first moment estimate for weights.
+
+        **v_w**: *np.ndarray*
+        Store second moment estimate for weights.
+
+        **m_b**: *np.ndarray*
+        Store first moment estimate for bias.
+
+        **v_b**: *np.ndarray*
+        Store second moment estimate for bias.
+
+        **beta1**: *float*
+        Exponential decay rate for first moment.
+
+        **beta2**: *float*
+        Exponential decay rate for second moment.
+
+    ## Methods:
+      **_calculate_loss(y_true, y_pred)**: *Return float*
+      Calculate model loss during training loop.
+
+      **_calculate_grad(X, y)**: *Returns np.ndarray, float, np.ndarray*
+      Calculate gradient of selected loss function, 
+      return weight and bias gradient and also the linear combination.
+
+      **fit(X_train, y_train)**: *Return None*
+      Train model with inputed X_train and y_train argument data.
+
+      **predict(X_test)**: *Return np.ndarray*
+      Predict using weights from training session.
+
+      **score(X_test)**: *Return float*
+      Calculate model classification accuracy.
+
+      **get_params(deep)**: *Return dict*
+      Return model's parameter.
+
+      **set_params([params])**: *Return model's class*
+      Set model parameter.
+
+    ## Notes:
+      Model is fully implemented on python that may be easy to understand for beginners,
+      but also may cause a big latency comparing to another libraries models.
+
+    ## Usage Example:
+    ```python
+      >>> model = IntenseRegressor(loss='smoothl1')
+      >>> model.fit(X_train, y_train)
+      >>>
+      >>> acc = model.score(X_test)
+      >>> print("IntenseRegressor accuracy:", acc)
+    ```
     """
     def __init__(
         self, 

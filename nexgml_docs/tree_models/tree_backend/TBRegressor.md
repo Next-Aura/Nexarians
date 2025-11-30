@@ -79,12 +79,12 @@ Builds the tree recursively.
 
 - **Raises** `ValueError` for empty data, shape mismatch, or invalid params
 
-### `predict(X_test)`
+### `predict(X_test, y_test)`
 Returns predicted target values by traversing the tree.
 
 - **Raises** `ValueError` if model not fitted
 
-### `score(X_test, y_test)`
+### `score(X_test)`
 Returns R² score.
 
 ## Usage Examples

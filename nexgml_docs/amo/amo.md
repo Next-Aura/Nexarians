@@ -49,7 +49,7 @@ Calculates the sigmoid (logistic) probability. It attempts to use `scipy.special
   * **Returns**:
       * (`np.ndarray`): Probabilities between 0 and 1.
 
-### `categorical_ce(y_true, y_pred_proba, mean=True)`
+### `categorical_ce(y_true, y_pred_proba, mean=True, epsilon=1e-8)`
 
 Calculates the categorical cross-entropy loss.
 
@@ -59,10 +59,11 @@ Calculates the categorical cross-entropy loss.
       * `y_true` (`np.ndarray`): True labels, expected in **one-hot encoded** format.
       * `y_pred_proba` (`np.ndarray`): Predicted class probabilities from the model.
       * `mean` (`bool`, default=`True`): If `True`, returns the mean loss over the batch. If `False`, returns the loss for each sample.
+      * `epsilon` (`float`, default=`1e-8`): Small value to prevent zero division error.
   * **Returns**:
       * (`np.ndarray` or `float`): The calculated loss.
 
-### `binary_ce(y_true, y_pred_proba, mean=True)`
+### `binary_ce(y_true, y_pred_proba, mean=True, epsilon=1e-8)`
 
 Calculates the binary cross-entropy loss for binary classification.
 
@@ -70,6 +71,7 @@ Calculates the binary cross-entropy loss for binary classification.
       * `y_true` (`np.ndarray`): True binary labels (0 or 1).
       * `y_pred_proba` (`np.ndarray`): Predicted probabilities (between 0 and 1).
       * `mean` (`bool`, default=`True`): If `True`, returns the mean loss.
+      * `epsilon` (`float`, default=`1e-8`): Small value to prevent zero division error.
   * **Returns**:
       * (`np.ndarray` or `float`): The calculated loss.
 
@@ -110,7 +112,7 @@ Calculates the Smooth L1 (Huber) Loss, which is less sensitive to outliers than 
   * **Parameters**:
       * `y_true` (`np.ndarray`): True continuous target values.
       * `y_pred` (`np.ndarray`): Predicted continuous values.
-      * `delta` (`float`): The threshold point where the function transitions from quadratic to linear.
+      * `delta` (`float`, default=`0.5`): The threshold point where the function transitions from quadratic to linear.
   * **Returns**:
       * (`float`): The Smooth L1 loss.
 
@@ -134,14 +136,14 @@ Calculates the ridge (L2) penalty.
   * **Returns**:
       * (`float`): The calculated penalty.
 
-### `elasticnet(a, alpha, l1_ratio)`
+### `elasticnet(a, alpha, l1_ratio=0.5)`
 
 Calculates the elastic net penalty.
 
   * **Parameters**:
       * `a` (`np.ndarray`): Argument that'll be regularized.
       * `alpha` (`float`): Penalty strength.
-      * `l1_ratio` (`float`): Penalties ratio between L1 and L2.
+      * `l1_ratio` (`float`, default=`0.5`): Penalties ratio between L1 and L2.
   * **Returns**:
       * (`float`): The calculated penalty.
 
@@ -241,39 +243,39 @@ ForTree module provides static methods for calculating node impurity and criteri
 
 ### Regression Tree Criteria
 
-### `squared_error(labels)`
+### `squared_error(y)`
 
 Calculates the variance of the labels, used as the splitting criterion for standard regression trees (equivalent to MSE).
 
   * **Parameters**:
-      * `labels` (`np.ndarray`): Continuous target values in the current node.
+      * `y` (`np.ndarray`): Continuous target values in the current node.
   * **Returns**:
       * (`float`): The variance (impurity) of the node.
 
-### `friedman_squared_error(labels)`
+### `friedman_squared_error(y)`
 
 Calculates an improved version of MSE for tree splitting, often used in Gradient Boosting.
 
   * **Parameters**:
-      * `labels` (`np.ndarray`): Continuous target values in the current node.
+      * `y` (`np.ndarray`): Continuous target values in the current node.
   * **Returns**:
       * (`float`): The impurity of the node.
 
-### `absolute_error(labels)`
+### `absolute_error(y)`
 
 Calculates the mean absolute error from the mean of the labels, used as a robust splitting criterion for regression trees (less sensitive to outliers).
 
   * **Parameters**:
-      * `labels` (`np.ndarray`): Continuous target values in the current node.
+      * `y` (`np.ndarray`): Continuous target values in the current node.
   * **Returns**:
       * (`float`): The impurity of the node.
 
-### `poisson_deviance(labels)`
+### `poisson_deviance(y)`
 
 Calculates the Poisson deviance, used as a splitting criterion for regression tasks involving count data.
 
   * **Parameters**:
-      * `labels` (`np.ndarray`): Non-negative count target values.
+      * `y` (`np.ndarray`): Non-negative count target values.
   * **Returns**:
       * (`float`): The impurity of the node.
   * **Raises**:
@@ -281,30 +283,30 @@ Calculates the Poisson deviance, used as a splitting criterion for regression ta
 
 ### Classification Tree Criteria
 
-### `gini_impurity(labels)`
+### `gini_impurity(y)`
 
 Calculates the Gini impurity, a standard criterion for classification trees (like CART). Measures the probability of misclassifying a randomly chosen element.
 
   * **Parameters**:
-      * `labels` (`np.ndarray`): Integer class labels in the current node.
+      * `y` (`np.ndarray`): Integer class labels in the current node.
   * **Returns**:
       * (`float`): The Gini impurity (0 = pure, 0.5 = max impurity for 2 classes).
 
-### `log_loss_impurity(labels)`
+### `log_loss_impurity(y)`
 
 Calculates the Cross-Entropy (Log Loss) impurity for a set of labels.
 
   * **Parameters**:
-      * `labels` (`np.ndarray`): Integer class labels in the current node.
+      * `y` (`np.ndarray`): Integer class labels in the current node.
   * **Returns**:
       * (`float`): The log loss impurity.
 
-### `entropy_impurity(labels)`
+### `entropy_impurity(y)`
 
 Calculates the Entropy impurity (using `log2`), used as the criterion for ID3 and C4.5 classification trees.
 
   * **Parameters**:
-      * `labels` (`np.ndarray`): Integer class labels in the current node.
+      * `y` (`np.ndarray`): Integer class labels in the current node.
   * **Returns**:
       * (`float`): The entropy (0 = pure, 1 = max impurity for 2 classes).
 

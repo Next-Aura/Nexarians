@@ -11,6 +11,54 @@ class TreeBackendRegressor:
     """
     TreeBackendRegressor (TBR) is a simple decision tree model for regression tasks. 
     It builds a tree by recursively splitting nodes to minimize a given criterion and supports various pruning/stopping parameters to prevent overfitting.
+    
+    ## Attrs:
+      **tree**: *dict*
+      Model's tree structure.
+
+    ## Methods: 
+      **compute_variance_sparse(X)**: *Return np.ndarray*
+      Compute the variance of each feature column in a sparse matrix.
+
+      **_impurity(y)**: *Return float*
+      Compute label variance (impurity).
+
+      **criterion_score(y, left_y, right_y)**: *Return float*
+      Calculate the impurity decrease (gain) from splitting.
+
+      **find_best_split(X, y, feature_idx)**: *Returns float, float or None*
+      Find the best split value for a given feature by evaluating potential split points and selecting the one that maximizes the impurity gain.
+    
+      **fit(X_train, y_train, depth)**: *Return dict*
+      Train model with inputed X_train and y_train argument data using recursive method.
+
+      **_predict_single(x, tree)**: *Return int*
+      Predict the class label for a single sample by traversing the decision tree.
+
+      **predict(X_test)**: *Return np.ndarray*
+      Predict using tree structure from training session.
+
+      **score(X_test)**: *Return float*
+      Calculate model classification accuracy.
+
+      **get_params(deep)**: *Return dict*
+      Return model's parameter.
+
+      **set_params([params])**: *Return model's class*
+      Set model parameter.
+
+    ## Notes:
+      Model is fully implemented on python that may be easy to understand for beginners,
+      but also may cause a big latency comparing to another libraries models.
+
+    ## Usage Example:
+    ```python
+      >>> model = TreeBackendRegressor(max_depth=8)
+      >>> model.fit(X_train, y_train)
+      >>>
+      >>> acc = model.score(X_test)
+      >>> print("TreeBackendRegressor accuracy:", acc)
+    ```
     """
     def __init__(
             self,
@@ -315,15 +363,15 @@ class TreeBackendRegressor:
         return best_feature, best_value, best_gain
 
     # ========== MAIN METHODS ==========
-    def fit(self, X: np.ndarray | spmatrix, y: np.ndarray, depth: int = 0) -> dict:
+    def fit(self, X_train: np.ndarray | spmatrix, y_train: np.ndarray, depth: int = 0) -> dict:
         """
         Recursively fit the decision tree regressor to the training data by building a tree structure through optimal splits based on impurity reduction.
 
         ## Args:
-            **X**: *np.ndarray* or *spmatrix*
+            **X_train**: *np.ndarray* or *spmatrix*
             Training input features, where each row is a sample and each column is a feature.
 
-            **y**: *np.ndarray*
+            **y_train**: *np.ndarray*
             Training target values corresponding to each sample in X.
 
             **depth**: *int, default=0*
@@ -336,19 +384,19 @@ class TreeBackendRegressor:
             **ValueError**: *If input data is empty, dimensions mismatch, or contains invalid values.*
         """
         # Check if data is not sparse
-        if not issparse(X):
+        if not issparse(X_train):
             # If it is, make sure it's an array
-            X = np.asarray(X)
+            X = np.asarray(X_train)
 
         # If data is sparse, transform to CSR or CSC depend on the shape
         else:
-            if X.shape[0] > X.shape[1]:
-              X = X.tocsr()
+            if X_train.shape[0] > X_train.shape[1]:
+              X = X_train.tocsr()
 
             else:
-              X = X.tocsc()
+              X = X_train.tocsc()
 
-        y = np.asarray(y)
+        y = np.asarray(y_train)
 
         # ---------- Data validation ----------
         # Make sure X and y data is not empty
@@ -472,12 +520,12 @@ class TreeBackendRegressor:
         else:
             return self._predict_single(x, tree["right"])
 
-    def predict(self, X: np.ndarray | spmatrix) -> np.ndarray:
+    def predict(self, X_test: np.ndarray | spmatrix) -> np.ndarray:
         """
         Predict the target values for the given input features using the trained model.
 
         ## Args:
-            **X**: *np.ndarray* or *spmatrix*
+            **X_test**: *np.ndarray* or *spmatrix*
             Input features for prediction.
 
         ## Returns:
@@ -487,13 +535,16 @@ class TreeBackendRegressor:
             **ValueError**: *If model tree is not defined (model not trained).*
         """
         # Check if data is sparse
-        if not issparse(X):
+        if not issparse(X_test):
             # Make sparse data to an array
-            X = np.asarray(X)
+            X = np.asarray(X_test)
+
+        else:
+            X = X_test
         
         # If X data dimention if 1 then reshape it to 2D
-        if X.ndim == 1:
-            X = X.reshape(1, -1)
+        if X_test.ndim == 1:
+            X = X_test.reshape(1, -1)
 
         # Error check
         if self.tree is None:

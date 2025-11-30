@@ -13,6 +13,17 @@ def softmax(z: np.ndarray) -> np.ndarray:
 
     ## Raises:
         **None**
+
+    ## Notes:
+      Calculation is helped by numpy for reaching C-like speed.
+
+    ## Usage Example:
+    ```python
+    >>> logits = [0.2, 0.2, 0.5, 0.1]
+    >>>
+    >>> penalty = softmax(logits)
+    >>> print(penalty)
+    ```
     """
     z = np.asarray(z)
     if z.ndim == 1:
@@ -43,6 +54,17 @@ def sigmoid(z: np.ndarray) -> np.ndarray:
 
     ## Raises:
         **None**
+
+    ## Notes:
+      Calculation is helped by numpy for reaching C-like speed.
+
+    ## Usage Example:
+    ```python
+    >>> logits = [0.725, 0.278]
+    >>>
+    >>> penalty = sigmoid(logits)
+    >>> print(penalty)
+    ```
     """
     try:
         from scipy.special import expit

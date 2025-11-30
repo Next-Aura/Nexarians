@@ -17,6 +17,18 @@ def one_hot_labeling(y: np.ndarray, classes: Optional[np.ndarray]) -> np.ndarray
 
     ## Raises
         **None**
+
+    ## Notes:
+      This function has python loop that may cause latency.
+
+    ## Usage Example:
+    ```python
+    >>> y = [1, 1, 1, 3, 3, 1]
+    >>> classes = np.unique(y)
+    >>> one_hot = one_hot_labeling(y=y, classes=classes)
+    >>>
+    >>> print("One-hot label:", one_hot)
+    ```
     """
     if classes is None:
         classes = np.unique(y)
@@ -46,6 +58,18 @@ def integer_labeling(y: np.ndarray, classes: Optional[np.ndarray], to_integer_fr
 
     ## Raises:
         **ValueError**: *If 'to_integer_from' argument is invalid.*
+
+    ## Notes:
+      This function has python loop that may cause latency.
+
+    ## Usage Example:
+    ```python
+    >>> y = [[0, 1, 0], [1, 0, 0], [0, 0, 1], [1, 0, 0]]
+    >>> classes = np.unique(y)
+    >>> label = integer_labeling(y=y, classes=classes)
+    >>>
+    >>> print("Integer label:", label)
+    ```
     """
     if classes is None:
         classes = np.unique(y)

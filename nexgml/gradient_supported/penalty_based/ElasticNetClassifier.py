@@ -12,6 +12,57 @@ class ElasticNetClassifier:
     ElasticNet Classifier is a linear classifier that uses coordinate descent to minimize
     a loss function with ElasticNet (L1 + L2) regularization.
     It is suitable for multi-class classification by fitting a single multi-class model.
+
+    ## Attrs:
+      **weights**: *np.ndarray*
+      An array that stored features weight with shape (n_feature,).
+
+      **b**: *float*
+      A float that is a bias model bias for flexibility output.
+
+      **loss_history**: list[float,...]
+      A list that stored loss from all iteration, loss_history is plot-able.
+
+      **classes**: *np.ndarray*
+      Store unique classes from fitted data in fit() method.
+
+      **n_classes**: *int*
+      Number of unique class from data.
+
+    ## Methods:
+      **_add_intercept(X)**: *Return np.ndarray*
+      Add one column for intercept terms.
+
+      **_soft_thresholding(rho, lam)**: *Return np.ndarray*
+      Apply the soft-thresholding operation (proximal operator for L1).
+
+      **fit(X_train, y_train)**: *Return None*
+      Train model with inputed X_train and y_train argument data.
+
+      **predict(X_test)**: *Return np.ndarray*
+      Predict using weights from training session.
+
+      **score(X_test)**: *Return float*
+      Calculate model classification accuracy.
+
+      **get_params(deep)**: *Return dict*
+      Return model's parameter.
+
+      **set_params([params])**: *Return model's class*
+      Set model parameter.
+
+    ## Notes:
+      Model is fully implemented on python that may be easy to understand for beginners,
+      but also may cause a big latency comparing to another libraries models.
+
+    ## Usage Example:
+    ```python
+      >>> model = ElasticNetClassifier(alpha=0.001)
+      >>> model.fit(X_train, y_train)
+      >>>
+      >>> acc = model.score(X_test)
+      >>> print("ElasticNetClassifier accuracy:", acc)
+    ```
     """
     def __init__(self, 
                  max_iter: int=100,
@@ -71,7 +122,7 @@ class ElasticNetClassifier:
         self.b = None                              # Model bias
         self.classes = None                        # Array of unique class labels from training data
         self.n_classes = None                      # Number of unique classes (determined during fit)
-        self.loss_history = []                 # Store residual history per epoch
+        self.loss_history = []                     # Store residual history per epoch
 
     def _add_intercept(self, X: np.ndarray) -> np.ndarray:
         """

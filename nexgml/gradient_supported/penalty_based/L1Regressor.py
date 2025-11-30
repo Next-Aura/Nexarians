@@ -10,6 +10,57 @@ class L1Regressor:
     """
     L1 Regressor, also known as Lasso Regression, is a linear regression model that uses
     L1 regularization to prevent overfitting and perform feature selection. It finds the optimal weights using Coordinate Descent.
+    
+    ## Attrs:
+      **weights**: *np.ndarray*
+      An array that stored features weight with shape (n_feature,).
+
+      **b**: *float*
+      A float that is a bias model bias for flexibility output.
+
+      **loss_history**: list[float,...]
+      A list that stored loss from all iteration, loss_history is plot-able.
+
+      **classes**: *np.ndarray*
+      Store unique classes from fitted data in fit() method.
+
+      **n_classes**: *int*
+      Number of unique class from data.
+
+    ## Methods:
+      **_add_intercept(X)**: *Return np.ndarray*
+      Add one column for intercept terms.
+
+      **_soft_threshold(z, gamma)**: *Return np.ndarray*
+      Apply the soft-thresholding operation (proximal operator for L1).
+
+      **fit(X_train, y_train)**: *Return None*
+      Train model with inputed X_train and y_train argument data.
+
+      **predict(X_test)**: *Return np.ndarray*
+      Predict using weights from training session.
+
+      **score(X_test)**: *Return float*
+      Calculate model classification accuracy.
+
+      **get_params(deep)**: *Return dict*
+      Return model's parameter.
+
+      **set_params([params])**: *Return model's class*
+      Set model parameter.
+
+    ## Notes:
+      Model is fully implemented on python that may be easy to understand for beginners,
+      but also may cause a big latency comparing to another libraries models.
+
+    ## Usage Example:
+    ```python
+        >>> model = L1Regressor(alpha=0.001)
+        >>> model.fit(X_train, y_train)
+        >>>
+        >>> acc = model.score(X_test)
+        >>> print("L1Regressor accuracy:", acc)
+    ```
     """
 
     def __init__(self,
@@ -64,6 +115,23 @@ class L1Regressor:
         self.b = None                              # Model bias
         self.n_outputs_ = None                     # Number of y data outputs
         self.loss_history = []                     # Store residual history per epoch
+
+    def _add_intercept(self, X: np.ndarray) -> np.ndarray:
+        """
+        Helper function to add a column of ones for the intercept term.
+
+        ## Args:
+            **X**: *np.ndarray*
+            Input features array.
+
+        ## Returns:
+            **np.ndarray**: *Augmented array with an intercept column.*
+
+        ## Raises:
+            **None**
+        """
+        ones = csr_matrix(np.ones((X.shape[0], 1), dtype=X.dtype))
+        return hstack([ones, X], format='csr')
 
     def _soft_threshold(self, z: np.ndarray, gamma: float) -> np.ndarray:
         """
@@ -141,23 +209,21 @@ class L1Regressor:
                 raise ValueError("NaN or infinity in data")
 
         self.n_outputs_ = n_outputs
-        is_sparse = issparse(X)
 
         # Augment X with intercept column if needed
         if self.intercept:
-            ones = csr_matrix(np.ones((n_samples, 1), dtype=np.float64)) if is_sparse else np.ones((n_samples, 1), dtype=np.float64)
-            X_aug = hstack([ones, X], format='csr') if is_sparse else np.hstack([ones, X])
-            n_features_aug = X.shape[1] + 1
+            X_aug = self._add_intercept(X)
         else:
             X_aug = X
-            n_features_aug = X.shape[1]
+
+        is_sparse = issparse(X_aug)
+        n_features_aug = X_aug.shape[1]
 
         # Precompute column norms (X_j^T @ X_j) for efficiency
         norms = np.zeros(n_features_aug)
         for j in range(n_features_aug):
             Xj = X_aug[:, j]
             norms[j] = Xj.multiply(Xj).sum() if is_sparse else np.dot(Xj.T, Xj)
-
 
             # Handle potential zero norm (e.g., constant zero feature column)
             if norms[j] <= 1e-10:

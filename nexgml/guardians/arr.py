@@ -19,6 +19,17 @@ def safe_array(arr: np.ndarray, max_value: float=1e10, min_value: float=-1e10) -
 
     ## Raises:
         **RuntimeWarning**: *Warns if any values were clipped due to overflow.*
+
+    ## Notes:
+      This function is specified for 1D array.
+
+    ## Usage Example:
+    ```python
+    >>> X = [nan, 1e10, nan, -inf]
+    >>> safe_one = safe_array(arr=X, max_value=1e12, min_value=-1e12)
+    >>>
+    >>> print("Safe array:", safe_one)
+    ```
     """
     # Replace NaN and inf with finite numbers
     arr = np.asarray(arr)

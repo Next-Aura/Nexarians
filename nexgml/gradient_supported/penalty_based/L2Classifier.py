@@ -11,6 +11,51 @@ class L2Classifier:
     L2 (Ridge) Classifier is a linear classifier that minimizes a loss function with L2 regularization.
     It uses a closed-form solution (Normal Equation) rather than iterative gradient descent.
     This model is effectively a multi-class logistic regression solved via least squares.
+    
+    ## Attrs:
+      **weights**: *np.ndarray*
+      An array that stored features weight with shape (n_feature,).
+
+      **b**: *float*
+      A float that is a bias model bias for flexibility output.
+
+      **classes**: *np.ndarray*
+      Store unique classes from fitted data in fit() method.
+
+      **n_classes**: *int*
+      Number of unique class from data.
+
+    ## Methods:
+      **_add_intercept(X)**: *Return np.ndarray*
+      Add one column for intercept terms.
+
+      **fit(X_train, y_train)**: *Return None*
+      Train model with inputed X_train and y_train argument data.
+
+      **predict(X_test)**: *Return np.ndarray*
+      Predict using weights from training session.
+
+      **score(X_test)**: *Return float*
+      Calculate model classification accuracy.
+
+      **get_params(deep)**: *Return dict*
+      Return model's parameter.
+
+      **set_params([params])**: *Return model's class*
+      Set model parameter.
+
+    ## Notes:
+      Model is fully implemented on python that may be easy to understand for beginners,
+      but also may cause a big latency comparing to another libraries models.
+
+    ## Usage Example:
+    ```python
+        >>> model = L2Classifier(alpha=0.0005)
+        >>> model.fit(X_train, y_train)
+        >>>
+        >>> acc = model.score(X_test)
+        >>> print("L2Classifier accuracy:", acc)
+    ```
     """
     def __init__(self, 
                  alpha: float=1e-4, 

@@ -11,6 +11,51 @@ class TreeBackendClassifier:
     """
     TreeBackendClassifier (TBC) is a simple decision tree model for classification tasks.
     It builds a tree by recursively splitting nodes to minimize a given criterion and supports various pruning/stopping parameters to prevent overfitting.
+    
+    ## Attrs:
+      **tree**: *dict*
+      Model's tree structure.
+
+    ## Methods: 
+      **compute_variance_sparse(X)**: *Return np.ndarray*
+      Compute the variance of each feature column in a sparse matrix.
+
+      **find_best_split(X, y , feature_idx)**: *Returns float, float or None*
+      Find the best split value for a given feature by evaluating potential split points and selecting the one that minimizes the impurity.
+
+      **find_best_feature_split(X, y)**: *Returns float or None, float or None, float*
+      Find the best feature and corresponding split value across all considered features by evaluating the minimum impurity for each feature's best split.
+    
+      **fit(X_train, y_train, depth)**: *Return dict*
+      Train model with inputed X_train and y_train argument data using recursive method.
+
+      **_predict_single(x, tree)**: *Return int*
+      Predict the class label for a single sample by traversing the decision tree.
+
+      **predict(X_test)**: *Return np.ndarray*
+      Predict using tree structure from training session.
+
+      **score(X_test)**: *Return float*
+      Calculate model classification accuracy.
+
+      **get_params(deep)**: *Return dict*
+      Return model's parameter.
+
+      **set_params([params])**: *Return model's class*
+      Set model parameter.
+
+    ## Notes:
+      Model is fully implemented on python that may be easy to understand for beginners,
+      but also may cause a big latency comparing to another libraries models.
+
+    ## Usage Example:
+    ```python
+      >>> model = TreeBackendClassifier(max_depth=8)
+      >>> model.fit(X_train, y_train)
+      >>>
+      >>> acc = model.score(X_test)
+      >>> print("TreeBackendClassifier accuracy:", acc)
+    ```
     """
     def __init__(
             self,
@@ -296,15 +341,15 @@ class TreeBackendClassifier:
         return best_feature, best_value, best_impurity
 
     # ========== MAIN METHODS ==========
-    def fit(self, X: np.ndarray | spmatrix, y: np.ndarray, depth=0) -> dict:
+    def fit(self, X_train: np.ndarray | spmatrix, y_train: np.ndarray, depth=0) -> dict:
         """
         Recursively fit the decision tree classifier to the training data by building a tree structure through optimal splits based on impurity reduction.
 
         ## Args:
-            **X**: *np.ndarray* or *spmatrix*
+            **X_train**: *np.ndarray* or *spmatrix*
             Training input features, where each row is a sample and each column is a feature.
 
-            **y**: *np.ndarray*
+            **y_train**: *np.ndarray*
             Training target labels corresponding to each sample in X.
 
             **depth**: *int, default=0*
@@ -318,18 +363,18 @@ class TreeBackendClassifier:
         """
         # ---------- Data validation ----------
         # Ensure X is array if not sparse
-        if not issparse(X):
-            X = np.asarray(X)
+        if not issparse(X_train):
+            X = np.asarray(X_train)
         # Convert to CSR or CSC if sparse
         else:
-            if X.shape[0] > X.shape[1]:
-              X = X.tocsr()
+            if X_train.shape[0] > X_train.shape[1]:
+              X = X_train.tocsr()
 
             else:
-              X = X.tocsc()
+              X = X_train.tocsc()
 
         # Ensure y is array
-        y = np.asarray(y)
+        y = np.asarray(y_train)
         
         # Check for empty data or mismatch length
         if not issparse(X) and not issparse(y):
@@ -458,12 +503,12 @@ class TreeBackendClassifier:
         else:
             return self._predict_single(x, tree["right"])
 
-    def predict(self, X: np.ndarray | spmatrix) -> np.ndarray:
+    def predict(self, X_test: np.ndarray | spmatrix) -> np.ndarray:
         """
         Predict class labels for multiple samples.
 
         ## Args:
-            **X**: *np.ndarray* or *spmatrix*
+            **X_test**: *np.ndarray* or *spmatrix*
             Input features for prediction.
 
         ## Returns:
@@ -473,12 +518,15 @@ class TreeBackendClassifier:
             **ValueError**: *If model tree is not defined (model not trained).*
         """
         # Ensure X is array if not sparse
-        if not issparse(X):
-            X = np.asarray(X)
+        if not issparse(X_test):
+            X = np.asarray(X_test)
+
+        else:
+            X = X_test
 
         # Handle single sample prediction
-        if X.ndim == 1:
-            X = X.reshape(1, -1)
+        if X_test.ndim == 1:
+            X = X_test.reshape(1, -1)
             
         # Error check
         if self.tree is None:

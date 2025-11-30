@@ -11,6 +11,45 @@ class L2Regressor:
     L2 regularization (Tikhonov regularization) to prevent overfitting and handle 
     multicollinearity in the data. It finds the optimal weights using the closed-form 
     solution (Normal Equation) with a penalty term.
+
+    ## Attrs:
+      **weights**: *np.ndarray*
+      An array that stored features weight with shape (n_feature,).
+
+      **b**: *float*
+      A float that is a bias model bias for flexibility output.
+
+    ## Methods:
+      **_add_intercept(X)**: *Return np.ndarray*
+      Add one column for intercept terms.
+
+      **fit(X_train, y_train)**: *Return None*
+      Train model with inputed X_train and y_train argument data.
+
+      **predict(X_test)**: *Return np.ndarray*
+      Predict using weights from training session.
+
+      **score(X_test)**: *Return float*
+      Calculate model classification accuracy.
+
+      **get_params(deep)**: *Return dict*
+      Return model's parameter.
+
+      **set_params([params])**: *Return model's class*
+      Set model parameter.
+
+    ## Notes:
+      Model is fully implemented on python that may be easy to understand for beginners,
+      but also may cause a big latency comparing to another libraries models.
+
+    ## Usage Example:
+    ```python
+        >>> model = L2Regressor(alpha=0.0005)
+        >>> model.fit(X_train, y_train)
+        >>>
+        >>> acc = model.score(X_test)
+        >>> print("L2Regressor accuracy:", acc)
+    ```
     """
     
     def __init__(self, 
