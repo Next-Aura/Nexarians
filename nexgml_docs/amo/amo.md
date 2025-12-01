@@ -200,7 +200,7 @@ Calculates the Categorical Cross-entropy (CCE) loss function derivative.
       * `X` (`np.ndarray`): The data for formula calculation.
       * `residual` (`np.ndarray`): Residual data.
       * `intercept` (`bool`): Intercept flag, if true the function will also calculate grad w.r.t bias.
-      * `classes` (`int`): Number of classes.
+      * `classes` (`int`): Number of classes, optional.
   * **Returns**:
       * (`tuple[np.ndarray, float]`): gradient w.r.t weight, gradient w.r.t bias.
 
