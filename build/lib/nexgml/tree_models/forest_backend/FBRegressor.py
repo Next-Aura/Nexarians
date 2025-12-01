@@ -12,6 +12,42 @@ class ForestBackendRegressor:
     """
     ForestBackendRegressor (FBR) is an ensemble model for regression tasks based on decision trees.
     It builds multiple trees (a "forest") by randomly sampling data and features, and aggregates their predictions to improve accuracy and control overfitting.
+    
+    ## Attrs:
+      **trees**: *list*
+      Stored estimator model tree structure.
+
+      **feature_indices**: *list*
+      Stored which feature each estimator trained with.
+
+    ## Methods:
+      **fit(X_train, y_train)**: *Return None*
+      Train model with inputed X_train and y_train argument data.
+
+      **predict(X_test)**: *Return np.ndarray*
+      Predict using tree structure from training session.
+
+      **score(X_test, y_test)**: *Return float*
+      Calculate model classification accuracy.
+
+      **get_params(deep)**: *Return dict*
+      Return model's parameter.
+
+      **set_params([params])**: *Return model's class*
+      Set model parameter.
+
+    ## Notes:
+      Model is fully implemented on python that may be easy to understand for beginners,
+      but also may cause a big latency comparing to another libraries models.
+
+    ## Usage Example:
+    ```python
+      >>> model = ForestBackendRegressor(n_estimator=75)
+      >>> model.fit(X_train, y_train)
+      >>>
+      >>> acc = model.score(X_test, y_test)
+      >>> print("ForestBackendRegressor accuracy:", acc)
+    ```
     """
 
     def __init__(
@@ -119,15 +155,15 @@ class ForestBackendRegressor:
         self.feature_indices = []
 
     # ========== MAIN METHODS ==========
-    def fit(self, X: np.ndarray | spmatrix, y: np.ndarray):
+    def fit(self, X_train: np.ndarray | spmatrix, y_train: np.ndarray) -> None:
         """
         Train the Random Forest Regressor on the training data by building multiple decision trees.
 
         ## Args:
-            **X**: *np.ndarray* or *spmatrix*
+            **X_train**: *np.ndarray* or *spmatrix*
             Training input features, where each row is a sample and each column is a feature.
 
-            **y**: *np.ndarray*
+            **y_train**: *np.ndarray*
             Training target values corresponding to each sample in X.
 
         ## Returns:
@@ -142,9 +178,13 @@ class ForestBackendRegressor:
 
         # ---------- Data preparation ----------
         # Convert to numpy arrays if needed
-        if not issparse(X):
-            X = np.asarray(X)
-        y = np.asarray(y)
+        if not issparse(X_train):
+            X = np.asarray(X_train)
+        
+        else:
+            X = X_train
+
+        y = np.asarray(y_train)
 
         # Get data shape
         n_samples, n_features = X.shape
@@ -195,12 +235,12 @@ class ForestBackendRegressor:
             if self.verbose == 1:
                 print(f"Trained tree {i+1}/{self.n_estimators}")
 
-    def predict(self, X: np.ndarray | spmatrix) -> np.ndarray:
+    def predict(self, X_test: np.ndarray | spmatrix) -> np.ndarray:
         """
         Predict the target values for the given input features by aggregating predictions from all trees in the forest.
 
         ## Args:
-            **X**: *np.ndarray* or *spmatrix*
+            **X_test**: *np.ndarray* or *spmatrix*
             Input features for prediction.
 
         ## Returns:
@@ -214,8 +254,11 @@ class ForestBackendRegressor:
             raise ValueError("Forest not defined, try to train the model with fit() function first")
 
         # ---------- Data preparation ----------
-        if not issparse(X):
-            X = np.asarray(X)
+        if not issparse(X_test):
+            X = np.asarray(X_test)
+
+        else:
+            X = X_test
         
         # Get sample count
         n_samples = X.shape[0]

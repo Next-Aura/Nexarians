@@ -1,11 +1,11 @@
 import numpy as np  # Numpy for numerical computations
 
-def squared_error(labels: np.ndarray) -> float:
+def squared_error(y: np.ndarray) -> float:
     """
     Calculate the variance of the given labels (MSE).
 
     ## Args:
-        **labels**: *np.ndarray*
+        **y**: *np.ndarray*
         Array of target values.
 
     ## Returns:
@@ -13,24 +13,61 @@ def squared_error(labels: np.ndarray) -> float:
         
     ## Raises:
         **None**
+
+    ## Notes:
+      Calculation is helped by numpy for reaching C-like speed.
+
+    ## Usage Example:
+    ```python
+    >>> y = np.ndarray([1, 2, 8, 1, 7, 2])
+    >>>
+    >>> var = squared_error(y)
+    >>> print("Variance: ", var)
+    >>> # print: 'Variance:  8.25'
+    ```
     """
     # Check label's size
-    if labels.size == 0:
+    if y.size == 0:
         # If the size is 0, then return 0.0
         return 0.0
     
     # Calculate label mean
-    mean = np.mean(labels)
+    mean = np.mean(y)
     # Calculate label variance (MSE)
-    return np.mean((labels - mean) ** 2)
+    return np.mean((y - mean) ** 2)
 
-def friedman_squared_error(labels: np.ndarray) -> float:
-    n = labels.size
+def friedman_squared_error(y: np.ndarray) -> float:
+    """
+    Calculate the variance of the given labels (MSE).
+
+    ## Args:
+        **y**: *np.ndarray*
+        Array of target values.
+
+    ## Returns:
+        **float**: *Variance of the labels. Returns 0.0 if labels are empty.*
+        
+    ## Raises:
+        **None**
+
+    ## Notes:
+      Calculation is helped by numpy for reaching C-like speed.
+
+    ## Usage Example:
+    ```python
+    >>> y = np.array([1, 2, 9, 1, 3, 2])
+    >>>
+    >>> var = friedman_squared_error(y)
+    >>> print("Variance: ", var)
+    >>> # print: 'Variance:  9.2'
+    ```
+    """
+    n = y.size
 
     if n <= 1:
         return 0.0
     
-    mean = np.mean((labels - np.mean(labels))**2)
+    mean = np.mean((y - np.mean(y))**2)
 
     return mean * (n / (n - 1))
 
@@ -47,6 +84,18 @@ def absolute_error(y: np.ndarray) -> float:
         
     ## Raises:
         **None**
+
+    ## Notes:
+      Calculation is helped by numpy for reaching C-like speed.
+
+    ## Usage Example:
+    ```python
+    >>> y = np.array([1, 2, 9, 1, 3, 2])
+    >>>
+    >>> var = absolute_error(y)
+    >>> print("Variance: ", var)
+    >>> # print: 'Variance:  2.0'
+    ```
     """
     # Check labels array size
     if y.size == 0:
@@ -71,6 +120,18 @@ def poisson_deviance(y: np.ndarray) -> float:
 
     ## Raises:
         **ValueError**: *If target values are negative.*
+
+    ## Notes:
+      Calculation is helped by numpy for reaching C-like speed.
+
+    ## Usage Example:
+    ```python
+    >>> y = np.array([1, 2, 9, 1, 3, 2])
+    >>>
+    >>> var = poisson_deviance(y)
+    >>> print("Variance: ", var)
+    >>> # print: 'Variance:  12.13685117648822'
+    ```
     """
     # Check labels array size
     if y.size == 0:
@@ -92,7 +153,7 @@ def poisson_deviance(y: np.ndarray) -> float:
     # Calculate labels variance (poisson deviance)
     return 2.0 * np.sum(y * np.log(np.maximum(y, 1e-9) / mean_y) - (y - mean_y))
 
-def gini_impurity(labels: np.ndarray) -> float:
+def gini_impurity(y: np.ndarray) -> float:
     """
     Calculate the Gini impurity for a set of labels.
 
@@ -101,7 +162,7 @@ def gini_impurity(labels: np.ndarray) -> float:
     of class i in the node.
 
     ## Args:
-        **labels**: *np.ndarray*
+        **y**: *np.ndarray*
         Array of class labels.
 
     ## Returns:
@@ -109,18 +170,30 @@ def gini_impurity(labels: np.ndarray) -> float:
 
     ## Raises:
         **None**
+
+    ## Notes:
+      Calculation is helped by numpy for reaching C-like speed.
+
+    ## Usage Example:
+    ```python
+    >>> labels = np.array([1, 2, 9, 1, 3, 2])
+    >>>
+    >>> impurity = gini_impurity(labels)
+    >>> print("Impurity: ", impurity)
+    >>> # print: 'Impurity:  0.7222222222222222'
+    ```
     """
-    if len(labels) == 0:
+    if len(y) == 0:
         return 0.0
 
-    labels = labels.astype(np.int32)
-    max_label = labels.max() if len(labels) > 0 else 0
-    counts = np.bincount(labels, minlength=max_label + 1)
-    probs = counts / len(labels)
+    y = y.astype(np.int32)
+    max_label = y.max() if len(y) > 0 else 0
+    counts = np.bincount(y, minlength=max_label + 1)
+    probs = counts / len(y)
     gini = 1.0 - np.sum(probs ** 2)
     return gini
 
-def log_loss_impurity(labels: np.ndarray) -> float:
+def log_loss_impurity(y: np.ndarray) -> float:
     """
     Calculate the log loss (cross-entropy) for a set of labels.
 
@@ -137,14 +210,26 @@ def log_loss_impurity(labels: np.ndarray) -> float:
 
     ## Raises:
         **None**
+
+    ## Notes:
+      Calculation is helped by numpy for reaching C-like speed.
+
+    ## Usage Example:
+    ```python
+    >>> labels = np.array([1, 2, 9, 1, 3, 2])
+    >>>
+    >>> impurity = log_loss_impurity(labels)
+    >>> print("Impurity: ", impurity)
+    >>> # print: 'Impurity:  1.329661348854758'
+    ```
     """
-    if len(labels) == 0:
+    if len(y) == 0:
         return 0.0
 
-    labels = labels.astype(np.int32)
-    max_label = labels.max() if len(labels) > 0 else 0
-    counts = np.bincount(labels, minlength=max_label + 1)
-    probs = counts / len(labels)
+    y = y.astype(np.int32)
+    max_label = y.max() if len(y) > 0 else 0
+    counts = np.bincount(y, minlength=max_label + 1)
+    probs = counts / len(y)
 
     log_loss_val = 0.0
     for p in probs:
@@ -153,7 +238,7 @@ def log_loss_impurity(labels: np.ndarray) -> float:
 
     return log_loss_val
 
-def entropy_impurity(labels: np.ndarray) -> float:
+def entropy_impurity(y: np.ndarray) -> float:
     """
     Calculate the entropy for a set of labels.
 
@@ -170,14 +255,26 @@ def entropy_impurity(labels: np.ndarray) -> float:
 
     ## Raises:
         **None**
+
+    ## Notes:
+      Calculation is helped by numpy for reaching C-like speed.
+
+    ## Usage Example:
+    ```python
+    >>> labels = np.array([1, 2, 9, 1, 3, 2])
+    >>>
+    >>> impurity = entropy_impurity(labels)
+    >>> print("Impurity: ", impurity)
+    >>> # print: 'Impurity:  1.9182958340544893'
+    ```
     """
-    if len(labels) == 0:
+    if len(y) == 0:
         return 0.0
 
-    labels = labels.astype(np.int32)
-    max_label = labels.max() if len(labels) > 0 else 0
-    counts = np.bincount(labels, minlength=max_label + 1)
-    probs = counts / len(labels)
+    y = y.astype(np.int32)
+    max_label = y.max() if len(y) > 0 else 0
+    counts = np.bincount(y, minlength=max_label + 1)
+    probs = counts / len(y)
 
     entropy_val = 0.0
     for p in probs:

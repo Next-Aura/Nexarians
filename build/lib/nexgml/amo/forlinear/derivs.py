@@ -20,6 +20,16 @@ def mse_deriv(X: np.ndarray, residual: np.ndarray, intercept: bool) -> tuple[np.
 
     ## Raises:
       **None**
+
+    ## Notes:
+      Calculation is helped by numpy for reaching C-like speed.
+
+    ## Usage Example:
+    ```python
+    >>> pred = X @ coef + bias
+    >>> residual = pred - y
+    >>> grad_w, grad_b = mse_deriv(X=X, residual=residual, intercept=True)
+    ```
     """
     # Initialize bias gradient
     grad_b = 0.0
@@ -51,6 +61,16 @@ def rmse_deriv(X: np.ndarray, residual: np.ndarray, intercept: bool) -> tuple[np
 
     ## Raises:
       **None**
+
+    ## Notes:
+      Calculation is helped by numpy for reaching C-like speed.
+
+    ## Usage Example:
+    ```python
+    >>> pred = X @ coef + bias
+    >>> residual = pred - y
+    >>> grad_w, grad_b = rmse_deriv(X=X, residual=residual, intercept=True)
+    ```
     """
     # Initialize gradient w.r.t bias
     grad_b = 0.0
@@ -84,6 +104,16 @@ def mae_deriv(X: np.ndarray, residual: np.ndarray, intercept: bool) -> tuple[np.
 
     ## Raises:
       **None**
+
+    ## Notes:
+      Calculation is helped by numpy for reaching C-like speed.
+
+    ## Usage Example:
+    ```python
+    >>> pred = X @ coef + bias
+    >>> residual = pred - y
+    >>> grad_w, grad_b = mae_deriv(X=X, residual=residual, intercept=True)
+    ```
     """
     # Initialize gradient w.r.t bias
     grad_b = 0.0
@@ -118,6 +148,16 @@ def smoothl1_deriv(X: np.ndarray, residual: np.ndarray, intercept: bool, delta: 
 
     ## Raises:
       **None**
+
+    ## Notes:
+      Calculation is helped by numpy for reaching C-like speed.
+
+    ## Usage Example:
+    ```python
+    >>> pred = X @ coef + bias
+    >>> residual = pred - y
+    >>> grad_w, grad_b = smoothl1_deriv(X=X, residual=residual, intercept=True, delta=0.8)
+    ```
     """
     # Initialize gradient w.r.t bias
     grad_b = 0.0
@@ -137,7 +177,7 @@ def smoothl1_deriv(X: np.ndarray, residual: np.ndarray, intercept: bool, delta: 
         
     return grad_w, grad_b
 
-def cce_deriv(X: np.ndarray, residual: np.ndarray, intercept: bool, classes: int) -> tuple[np.ndarray, float]:
+def cce_deriv(X: np.ndarray, residual: np.ndarray, intercept: bool, n_classes: int) -> tuple[np.ndarray, float]:
     """
     Calculate Categorical Cross-entropy (CCE) loss function derivative.
 
@@ -151,15 +191,29 @@ def cce_deriv(X: np.ndarray, residual: np.ndarray, intercept: bool, classes: int
       **intercept**: *bool*
       Intercept flag, if true the function will also calculate grad w.r.t bias.
 
+      **n_classes**: *int*
+      Number of class in the data.
+
     ## Returns:
       **tuple**: *np.ndarray, float*
       gradient w.r.t weight, gradient w.r.t bias.
 
     ## Raises:
       **None**
+
+    ## Notes:
+      Calculation is helped by numpy for reaching C-like speed.
+
+    ## Usage Example:
+    ```python
+    >>> n_classes = len(np.unique(y))
+    >>> pred = X @ coef + bias
+    >>> residual = pred - y
+    >>> grad_w, grad_b = cce_deriv(X=X, residual=residual, intercept=True, n_classes=n_classes)
+    ```
     """
     # Intialize gradient w.r.t bias
-    grad_b = np.zeros(classes)
+    grad_b = np.zeros(n_classes)
     # Gradient w.r.t w calculation
     grad_w = (X.T @ residual) / X.shape[0]
 
@@ -185,6 +239,17 @@ def lasso_deriv(a: np.ndarray, alpha: float) -> np.ndarray:
 
     ## Returns:
       **None**
+
+    ## Notes:
+      Calculation is helped by numpy for reaching C-like speed.
+
+    ## Usage Example:
+    ```python
+    >>> coef = 0.00025
+    >>> alpha = 0.0001
+    >>>
+    >>> grad = lasso_deriv(a=coef, alpha=alpha)
+    ```
     """
     grad = alpha * np.sign(a)
     return grad
@@ -205,6 +270,17 @@ def ridge_deriv(a: np.ndarray, alpha: float) -> np.ndarray:
 
     ## Returns:
       **None**
+
+    ## Notes:
+      Calculation is helped by numpy for reaching C-like speed.
+
+    ## Usage Example:
+    ```python
+    >>> coef = 0.00025
+    >>> alpha = 0.0001
+    >>>
+    >>> grad = ridge_deriv(a=coef, alpha=alpha)
+    ```
     """
     grad = 2 * alpha * a
     return grad
@@ -228,6 +304,17 @@ def elasticnet_deriv(a: np.ndarray, alpha: float, l1_ratio: float) -> np.ndarray
 
     ## Returns:
       **None**
+
+    ## Notes:
+      Calculation is helped by numpy for reaching C-like speed.
+
+    ## Usage Example:
+    ```python
+    >>> coef = 0.00025
+    >>> alpha = 0.0001
+    >>>
+    >>> grad = elasticnet_deriv(a=coef, alpha=alpha, l1_ratio=0.2)
+    ```
     """
     # L1 part
     l1 = l1_ratio * np.sign(a)

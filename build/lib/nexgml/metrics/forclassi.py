@@ -16,6 +16,17 @@ def accuracy_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 
     ## Raises:
         **None**
+
+    ## Notes:
+      This function only for classifier models.
+
+    ## Usage Example:
+    ```python
+    >>> pred = model.predict(X_test)
+    >>> acc = accuracy_score(y_true=y_test, y_pred=pred)
+    >>>
+    >>> print("Model's accuracy:", acc)
+    ```
     """
     # Compare prediction with true labels and compute mean
     return np.mean(y_pred == y_true)
@@ -36,6 +47,17 @@ def precision_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 
     ## Raises:
         **None**
+
+    ## Notes:
+      This function only for classifier models.
+
+    ## Usage Example:
+    ```python
+    >>> pred = model.predict(X_test)
+    >>> precis = precision_score(y_true=y_test, y_pred=pred)
+    >>>
+    >>> print("Model's precision:", precis)
+    ```
     """
     true_positives = np.sum((y_pred == 1) & (y_true == 1))
     predicted_positives = np.sum(y_pred == 1)
@@ -61,6 +83,17 @@ def recall_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 
     ## Raises:
         **None**
+
+    ## Notes:
+      This function only for classifier models.
+
+    ## Usage Example:
+    ```python
+    >>> pred = model.predict(X_test)
+    >>> recall = recall_score(y_true=y_test, y_pred=pred)
+    >>>
+    >>> print("Model's recall:", recall)
+    ```
     """
     true_positives = np.sum((y_pred == 1) & (y_true == 1))
     actual_positives = np.sum(y_true == 1)
@@ -86,6 +119,17 @@ def f1_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 
     ## Raises:
         **None**
+
+    ## Notes:
+      This function only for classifier models.
+
+    ## Usage Example:
+    ```python
+    >>> pred = model.predict(X_test)
+    >>> f1 = f1_score(y_true=y_test, y_pred=pred)
+    >>>
+    >>> print("Model's f1 score:", f1)
+    ```
     """
     precision = precision_score(y_true, y_pred)
     recall = recall_score(y_true, y_pred)

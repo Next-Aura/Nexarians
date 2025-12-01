@@ -20,6 +20,23 @@ def standard_indexing(n: int, maxi: Literal['sqrt', 'log2'] | float | int) -> in
 
     ## Raises
         **ValueError**: *If invalid maxi argument is given*
+
+    ## Notes:
+      standart_indexing is mainly for dataset slicing.
+
+    ## Usage Example:
+    ```python
+    >>> X = [[1, 3, 2, 3, 5, 6, 7, 4, 3, 2, 5],
+             [4, 0, 4, 5, 6, 7, 8, 5, 2, 5, 7]]
+    >>> n = len(X[:])
+    >>>
+    >>> indices = standard_indexing(n=n, maxi=0.5)
+    >>>
+    >>> print("Slicing index:", indices)
+    >>> print("Sliced data:", X[indices])
+    >>> # print: 'Slicing index: 1'
+    >>> # print: 'Sliced data: [4, 0, 4, 5, 6, 7, 8, 5, 2, 5, 7]'
+    ```
     """
     if maxi is None:
         max_ = n

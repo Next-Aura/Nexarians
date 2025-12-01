@@ -10,6 +10,54 @@ class ElasticNetRegressor:
     """
     ElasticNet Regressor, combining L1 and L2 regularization for linear regression.
     Uses Coordinate Descent to optimize the model, balancing sparsity (L1) and smoothness (L2).
+    
+    ## Attrs:
+      **weights**: *np.ndarray*
+      An array that stored features weight with shape (n_feature,).
+
+      **b**: *float*
+      A float that is a bias model bias for flexibility output.
+
+      **loss_history**: list[float,...]
+      A list that stored loss from all iteration, loss_history is plot-able.
+
+      **n_outputs_**: *int*
+      Store number of classes, target, or output from y data.
+
+    ## Methods:
+      **_add_intercept(X)**: *Return np.ndarray*
+      Add one column for intercept terms.
+
+      **_soft_thresholding(rho, lam)**: *Return np.ndarray*
+      Apply the soft-thresholding operation (proximal operator for L1).
+
+      **fit(X_train, y_train)**: *Return None*
+      Train model with inputed X_train and y_train argument data.
+
+      **predict(X_test)**: *Return np.ndarray*
+      Predict using weights from training session.
+
+      **score(X_test, y_test)**: *Return float*
+      Calculate model classification accuracy.
+
+      **get_params(deep)**: *Return dict*
+      Return model's parameter.
+
+      **set_params([params])**: *Return model's class*
+      Set model parameter.
+
+    ## Notes:
+      Model is fully implemented on python that may be easy to understand for beginners,
+      but also may cause a big latency comparing to another libraries models.
+
+    ## Usage Example:
+    ```python
+      >>> model = ElasticNetRegressor(l1_ratio=0.8)
+      >>> model.fit(X_train, y_train)
+      >>>
+      >>> acc = model.score(X_test, y_test)
+      >>> print("ElasticNetRegressor accuracy:", acc)
+    ```
     """
     def __init__(self,
                  max_iter: int=100,

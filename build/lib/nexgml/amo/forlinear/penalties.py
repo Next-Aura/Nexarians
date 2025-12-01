@@ -16,12 +16,25 @@ def lasso(a: np.ndarray, alpha: float) -> float:
 
     ## Returns:
       **None**
+
+    ## Notes:
+      Calculation is helped by numpy for reaching C-like speed.
+
+    ## Usage Example:
+    ```python
+    >>> coef = 0.00025
+    >>> alpha = 0.0001
+    >>>
+    >>> penalty = lasso(a=coef, alpha=alpha)
+    >>> print("Penalty: ", penalty)
+    >>> # Print: 'Penalty:  0.000000025'
+    ```
     """
     return alpha * np.sum(np.abs(a))
 
 def ridge(a: np.ndarray, alpha: float) -> float:
     """
-    Calculate ridge (L1) penalty.
+    Calculate ridge (L2) penalty.
 
     ## Args:
         **a**: *np.ndarray*
@@ -35,10 +48,23 @@ def ridge(a: np.ndarray, alpha: float) -> float:
 
     ## Returns:
       **None**
+
+    ## Notes:
+      Calculation is helped by numpy for reaching C-like speed.
+
+    ## Usage Example:
+    ```python
+    >>> coef = 0.00025
+    >>> alpha = 0.0001
+    >>>
+    >>> penalty = ridge(a=coef, alpha=alpha)
+    >>> print("Penalty: ", penalty)
+    >>> # Print: Penalty:  0.00000000000625
+    ```
     """
     return alpha * np.sum(a**2)
 
-def elasticnet(a: np.ndarray, alpha: float, l1_ratio: float) -> float:
+def elasticnet(a: np.ndarray, alpha: float, l1_ratio: float=0.5) -> float:
     """
     Calculate elatic net penalty.
 
@@ -57,6 +83,19 @@ def elasticnet(a: np.ndarray, alpha: float, l1_ratio: float) -> float:
 
     ## Returns:
       **None**
+
+    ## Notes:
+      Calculation is helped by numpy for reaching C-like speed.
+
+    ## Usage Example:
+    ```python
+    >>> coef = 0.00025
+    >>> alpha = 0.0001
+    >>>
+    >>> penalty = elasticnet(a=coef, alpha=alpha, l1_ratio=0.6)
+    >>> print("Penalty: ", penalty)
+    >>> # Print: 'Penalty:  0.0000000150025'
+    ```
     """
     # L1 part
     l1 = l1_ratio * np.sum(np.abs(a))

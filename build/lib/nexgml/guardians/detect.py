@@ -13,6 +13,19 @@ def hasinf(arr: np.ndarray | list | sparse.spmatrix) -> bool:
 
     ## Raises:
         **None**
+
+    ## Notes:
+      This function only tell if there's an infinity value in a matrix, not returning bool mask.
+
+    ## Usage Example:
+    ```python
+    >>> X = [[nan, 0.9, inf, -8],
+             [1, 2, 6, 6]]
+    >>> has_inf = hasinf(arr=X)
+    >>>
+    >>> print("Has infinity:", has_inf)
+    >>> # print: 'Has infinity: True'
+    ```
     """
     arr = np.asarray(arr)
     stat = np.any(np.isinf(arr))
@@ -31,6 +44,19 @@ def hasnan(arr: np.ndarray | list | sparse.spmatrix) -> bool:
 
     ## Raises:
         **None**
+
+    ## Notes:
+      This function only tell if there's a Nan in a matrix, not returning bool mask.
+
+    ## Usage Example:
+    ```python
+    >>> X = [[nan, 0.9, inf, -8],
+             [1, 2, 6, 6]]
+    >>> has_nan = hasnan(arr=X)
+    >>>
+    >>> print("Has nan:", has_nan)
+    >>> # print: 'Has nan: True'
+    ```
     """
     arr = np.asarray(arr)
     stat = np.any(np.isnan(arr))
