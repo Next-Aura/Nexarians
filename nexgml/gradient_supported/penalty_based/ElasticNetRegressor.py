@@ -37,7 +37,7 @@ class ElasticNetRegressor:
       **predict(X_test)**: *Return np.ndarray*
       Predict using weights from training session.
 
-      **score(X_test)**: *Return float*
+      **score(X_test, y_test)**: *Return float*
       Calculate model classification accuracy.
 
       **get_params(deep)**: *Return dict*
@@ -55,7 +55,7 @@ class ElasticNetRegressor:
       >>> model = ElasticNetRegressor(l1_ratio=0.8)
       >>> model.fit(X_train, y_train)
       >>>
-      >>> acc = model.score(X_test)
+      >>> acc = model.score(X_test, y_test)
       >>> print("ElasticNetRegressor accuracy:", acc)
     ```
     """

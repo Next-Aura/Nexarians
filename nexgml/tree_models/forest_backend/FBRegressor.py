@@ -27,7 +27,7 @@ class ForestBackendRegressor:
       **predict(X_test)**: *Return np.ndarray*
       Predict using tree structure from training session.
 
-      **score(X_test)**: *Return float*
+      **score(X_test, y_test)**: *Return float*
       Calculate model classification accuracy.
 
       **get_params(deep)**: *Return dict*
@@ -45,7 +45,7 @@ class ForestBackendRegressor:
       >>> model = ForestBackendRegressor(n_estimator=75)
       >>> model.fit(X_train, y_train)
       >>>
-      >>> acc = model.score(X_test)
+      >>> acc = model.score(X_test, y_test)
       >>> print("ForestBackendRegressor accuracy:", acc)
     ```
     """

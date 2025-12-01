@@ -30,7 +30,7 @@ class ForestBackendClassifier:
       **predict_proba(X_test)**: *Return np.ndarray*
       Calculate class probability for classification.
 
-      **score(X_test)**: *Return float*
+      **score(X_test, y_test)**: *Return float*
       Calculate model classification accuracy.
 
       **get_params(deep)**: *Return dict*
@@ -48,7 +48,7 @@ class ForestBackendClassifier:
       >>> model = ForestBackendClassifier(n_estimator=75)
       >>> model.fit(X_train, y_train)
       >>>
-      >>> acc = model.score(X_test)
+      >>> acc = model.score(X_test, y_test)
       >>> print("ForestBackendClassifier accuracy:", acc)
     ```
     """

@@ -29,7 +29,7 @@ class L2Regressor:
       **predict(X_test)**: *Return np.ndarray*
       Predict using weights from training session.
 
-      **score(X_test)**: *Return float*
+      **score(X_test, y_test)**: *Return float*
       Calculate model classification accuracy.
 
       **get_params(deep)**: *Return dict*
@@ -47,7 +47,7 @@ class L2Regressor:
         >>> model = L2Regressor(alpha=0.0005)
         >>> model.fit(X_train, y_train)
         >>>
-        >>> acc = model.score(X_test)
+        >>> acc = model.score(X_test, y_test)
         >>> print("L2Regressor accuracy:", acc)
     ```
     """

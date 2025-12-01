@@ -25,10 +25,12 @@ def safe_array(arr: np.ndarray, max_value: float=1e10, min_value: float=-1e10) -
 
     ## Usage Example:
     ```python
-    >>> X = [nan, 1e10, nan, -inf]
+    >>> X = np.array([nan, 1e10, nan, -inf])
     >>> safe_one = safe_array(arr=X, max_value=1e12, min_value=-1e12)
     >>>
     >>> print("Safe array:", safe_one)
+    >>> # print: 'warn("There's NaN or infinity value.", RuntimeWarning)'
+    >>> #        'Safe array: [ 0.e+00  1.e+10  0.e+00 -1.e+12]'
     ```
     """
     # Replace NaN and inf with finite numbers

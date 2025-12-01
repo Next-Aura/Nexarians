@@ -19,10 +19,11 @@ def softmax(z: np.ndarray) -> np.ndarray:
 
     ## Usage Example:
     ```python
-    >>> logits = [0.2, 0.2, 0.5, 0.1]
+    >>> logits = np.mean([0.2, 0.2, 0.5, 0.1])
     >>>
-    >>> penalty = softmax(logits)
-    >>> print(penalty)
+    >>> proba = softmax(logits)
+    >>> print("Proba: ", proba)
+    >>> # print: 'Proba:  [0.23503441 0.23503441 0.31726326 0.21266793]'
     ```
     """
     z = np.asarray(z)
@@ -60,10 +61,11 @@ def sigmoid(z: np.ndarray) -> np.ndarray:
 
     ## Usage Example:
     ```python
-    >>> logits = [0.725, 0.278]
+    >>> logits = np.array([0.725, 0.278])
     >>>
-    >>> penalty = sigmoid(logits)
-    >>> print(penalty)
+    >>> proba = sigmoid(logits)
+    >>> print("Proba: ", proba)
+    >>> # print: 'Proba:  [0.6737071  0.56905583]'
     ```
     """
     try:

@@ -76,7 +76,7 @@ class BasicClassifier:
       >>> model = BasicClassifier(learning_rate=0.05)
       >>> model.fit(X_train, y_train)
       >>>
-      >>> acc = model.score(X_test)
+      >>> acc = model.score(X_test, y_test)
       >>> print("BasicClassifier accuracy:", acc)
     ```
     """

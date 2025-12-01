@@ -1,7 +1,7 @@
 import numpy as np                    # Numpy for numerical computations
 from typing import Optional           # More specific type hints
 
-def one_hot_labeling(y: np.ndarray, classes: Optional[np.ndarray]) -> np.ndarray:
+def one_hot_labeling(y: np.ndarray, classes: Optional[np.ndarray] | None=None) -> np.ndarray:
     """
     Label one-hot encoding
 
@@ -9,7 +9,7 @@ def one_hot_labeling(y: np.ndarray, classes: Optional[np.ndarray]) -> np.ndarray
         **y**: *np.ndarray*
         Labels data.
 
-        **classes**: *Optional[np.ndarray]*
+        **classes**: *Optional[np.ndarray] | None=None*
         Unique classes from labels data.
 
     ## Returns
@@ -23,11 +23,12 @@ def one_hot_labeling(y: np.ndarray, classes: Optional[np.ndarray]) -> np.ndarray
 
     ## Usage Example:
     ```python
-    >>> y = [1, 1, 1, 3, 3, 1]
+    >>> y = [1, 1, 1, 2, 2, 1]
     >>> classes = np.unique(y)
     >>> one_hot = one_hot_labeling(y=y, classes=classes)
     >>>
-    >>> print("One-hot label:", one_hot)
+    >>> print("One-hot label: ", one_hot)
+    >>> # print: 'One-hot label: [[1 0], [1 0], [1 0], [0 1], [0 1], [1 0]]'
     ```
     """
     if classes is None:
@@ -39,7 +40,7 @@ def one_hot_labeling(y: np.ndarray, classes: Optional[np.ndarray]) -> np.ndarray
         
     return y_one_hot
 
-def integer_labeling(y: np.ndarray, classes: Optional[np.ndarray], to_integer_from: str='one-hot') -> np.ndarray:
+def integer_labeling(y: np.ndarray, classes: Optional[np.ndarray] | None=None, to_integer_from: str='one-hot') -> np.ndarray:
     """
     Label integer encoding
 
@@ -47,7 +48,7 @@ def integer_labeling(y: np.ndarray, classes: Optional[np.ndarray], to_integer_fr
         **y**: *np.ndarray*
         Labels data.
 
-        **classes**: *Optional[np.ndarray]*
+        **classes**: *Optional[np.ndarray] | None=None*
         Unique classes from labels data.
 
         **to_integer_from**: *str*
@@ -68,7 +69,8 @@ def integer_labeling(y: np.ndarray, classes: Optional[np.ndarray], to_integer_fr
     >>> classes = np.unique(y)
     >>> label = integer_labeling(y=y, classes=classes)
     >>>
-    >>> print("Integer label:", label)
+    >>> print("Integer label: ", label)
+    >> # print: 'Integer label:  [1 0 2 0]'
     ```
     """
     if classes is None:

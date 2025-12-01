@@ -34,6 +34,8 @@ def standard_indexing(n: int, maxi: Literal['sqrt', 'log2'] | float | int) -> in
     >>>
     >>> print("Slicing index:", indices)
     >>> print("Sliced data:", X[indices])
+    >>> # print: 'Slicing index: 1'
+    >>> # print: 'Sliced data: [4, 0, 4, 5, 6, 7, 8, 5, 2, 5, 7]'
     ```
     """
     if maxi is None:

@@ -19,10 +19,11 @@ def squared_error(y: np.ndarray) -> float:
 
     ## Usage Example:
     ```python
-    >>> y = [1, 2, 8, 1, 7, 2]
+    >>> y = np.ndarray([1, 2, 8, 1, 7, 2])
     >>>
     >>> var = squared_error(y)
-    >>> print(var)
+    >>> print("Variance: ", var)
+    >>> # print: 'Variance:  8.25'
     ```
     """
     # Check label's size
@@ -54,10 +55,11 @@ def friedman_squared_error(y: np.ndarray) -> float:
 
     ## Usage Example:
     ```python
-    >>> y = [1, 2, 9, 1, 3, 2]
+    >>> y = np.array([1, 2, 9, 1, 3, 2])
     >>>
     >>> var = friedman_squared_error(y)
-    >>> print(var)
+    >>> print("Variance: ", var)
+    >>> # print: 'Variance:  9.2'
     ```
     """
     n = y.size
@@ -88,10 +90,11 @@ def absolute_error(y: np.ndarray) -> float:
 
     ## Usage Example:
     ```python
-    >>> y = [1, 2, 9, 1, 3, 2]
+    >>> y = np.array([1, 2, 9, 1, 3, 2])
     >>>
     >>> var = absolute_error(y)
-    >>> print(var)
+    >>> print("Variance: ", var)
+    >>> # print: 'Variance:  2.0'
     ```
     """
     # Check labels array size
@@ -123,10 +126,11 @@ def poisson_deviance(y: np.ndarray) -> float:
 
     ## Usage Example:
     ```python
-    >>> y = [1, 2, 9, 1, 3, 2]
+    >>> y = np.array([1, 2, 9, 1, 3, 2])
     >>>
     >>> var = poisson_deviance(y)
-    >>> print(var)
+    >>> print("Variance: ", var)
+    >>> # print: 'Variance:  12.13685117648822'
     ```
     """
     # Check labels array size
@@ -172,10 +176,11 @@ def gini_impurity(y: np.ndarray) -> float:
 
     ## Usage Example:
     ```python
-    >>> labels = [1, 2, 9, 1, 3, 2]
+    >>> labels = np.array([1, 2, 9, 1, 3, 2])
     >>>
     >>> impurity = gini_impurity(labels)
-    >>> print(impurity)
+    >>> print("Impurity: ", impurity)
+    >>> # print: 'Impurity:  0.7222222222222222'
     ```
     """
     if len(y) == 0:
@@ -211,10 +216,11 @@ def log_loss_impurity(y: np.ndarray) -> float:
 
     ## Usage Example:
     ```python
-    >>> labels = [1, 2, 9, 1, 3, 2]
+    >>> labels = np.array([1, 2, 9, 1, 3, 2])
     >>>
     >>> impurity = log_loss_impurity(labels)
-    >>> print(impurity)
+    >>> print("Impurity: ", impurity)
+    >>> # print: 'Impurity:  1.329661348854758'
     ```
     """
     if len(y) == 0:
@@ -255,10 +261,11 @@ def entropy_impurity(y: np.ndarray) -> float:
 
     ## Usage Example:
     ```python
-    >>> labels = [1, 2, 9, 1, 3, 2]
+    >>> labels = np.array([1, 2, 9, 1, 3, 2])
     >>>
     >>> impurity = entropy_impurity(labels)
-    >>> print(impurity)
+    >>> print("Impurity: ", impurity)
+    >>> # print: 'Impurity:  1.9182958340544893'
     ```
     """
     if len(y) == 0:
