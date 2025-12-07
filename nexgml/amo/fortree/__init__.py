@@ -8,7 +8,7 @@
   ## Note:
     **All the helpers implemented in python programming language.**"""
 
-from .impurity import (squared_error,
+from .impurities import (squared_error,
                        friedman_squared_error,
                        absolute_error,
                        gini_impurity,

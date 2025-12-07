@@ -103,12 +103,12 @@ class ElasticNetRegressor:
           **None**
         """
         # =========== HYPERPARAMETERS ==========
-        self.alpha = float(alpha)                  # Alpha for regularization power
+        self.alpha = np.float32(alpha)             # Alpha for regularization power
         self.intercept = bool(fit_intercept)       # Fit intercept (bias) or not
         self.verbose = int(verbose)                # Model progress logging
         self.max_iter = int(max_iter)              # Model max training iterations
-        self.tol = float(tol)                      # Training loss tolerance
-        self.l1_ratio = float(l1_ratio)            # Elastic net mixing ratio
+        self.tol = np.float32(tol)                 # Training loss tolerance
+        self.l1_ratio = np.float32(l1_ratio)       # Elastic net mixing ratio
         self.early_stop = bool(early_stopping)     # Early stopping flag
         self.stoic_iter = int(stoic_iter)          # Warm-up iterations before applying early stopping
 
@@ -181,19 +181,19 @@ class ElasticNetRegressor:
                 raise ValueError(f"There's a NaN or infinity value between X_train and y_train data, please clean your data first.")
 
         if isinstance(X_train, pd.DataFrame):
-            X = X_train.to_numpy(dtype=np.float64)
+            X = X_train.to_numpy(dtype=np.float32)
 
         if issparse(X_train):
             X = X_train.toarray()
 
         else:
-            X = np.array(X_train, dtype=np.float64)
+            X = np.array(X_train, dtype=np.float32)
 
         if X.ndim != 2:
             raise ValueError(f"Expected 2D array for X, got shape {X.shape}")
 
-        X = np.asarray(X, dtype=np.float64)
-        Y = np.asarray(y_train, dtype=np.float64)
+        X = np.asarray(X, dtype=np.float32)
+        Y = np.asarray(y_train, dtype=np.float32)
         Y = Y.reshape(-1, 1)
         n_samples, n_features = X.shape
         n_samples_y, n_classes = Y.shape
@@ -207,11 +207,11 @@ class ElasticNetRegressor:
             X_aug = X
 
         d = X_aug.shape[1]
-        self.weights = np.zeros((d, n_classes), dtype=np.float64)
+        self.weights = np.zeros((d, n_classes), dtype=np.float32)
 
         for k in range(n_classes):
             y = Y[:, k]
-            w = np.zeros(d, dtype=np.float64)
+            w = np.zeros(d, dtype=np.float32)
             for iteration in range(self.max_iter):
                 w_old = w.copy()
                 for j in range(d):
@@ -262,7 +262,7 @@ class ElasticNetRegressor:
             self.b = self.weights[0, :].reshape(1, -1)
             self.weights = self.weights[1:, :]
         else:
-            self.b = np.zeros((1, n_classes), dtype=np.float64)
+            self.b = np.zeros((1, n_classes), dtype=np.float32)
 
         return self
 
@@ -290,18 +290,18 @@ class ElasticNetRegressor:
                 raise ValueError(f"There's a NaN or infinity value in X data, please clean your data first.")
 
         if isinstance(X_train, pd.DataFrame):
-            X = X_train.to_numpy(dtype=np.float64)
+            X = X_train.to_numpy(dtype=np.float32)
 
         elif issparse(X_train):
-            X = X_train.toarray().astype(np.float64)
+            X = X_train.toarray().astype(np.float32)
 
         else:
-            X = np.array(X_train, dtype=np.float64)
+            X = np.array(X_train, dtype=np.float32)
 
         if X.ndim != 2:
             raise ValueError(f"Expected 2D array for X, got shape {X.shape}")
         
-        X = np.asarray(X, dtype=np.float64)
+        X = np.asarray(X, dtype=np.float32)
         n_samples, n_features = X.shape
         assert self.weights is not None, "Model not fitted"
         assert n_features == self.weights.shape[0], f"Feature mismatch: got {n_features}, expected {self.coef_.shape[0]}"

@@ -109,12 +109,12 @@ class ElasticNetClassifier:
             **None**
         """
         # ========== HYPERPARAMETERS ===========
-        self.alpha = float(alpha)                  # Alpha for regularization power
+        self.alpha = np.float32(alpha)             # Alpha for regularization power
         self.intercept = bool(fit_intercept)       # Fit intercept (bias) or not
         self.verbose = int(verbose)                # Model progress logging
         self.max_iter = int(max_iter)              # Model max training iterations
-        self.tol = float(tol)                      # Training loss tolerance
-        self.l1_ratio = float(l1_ratio)            # Elastic net mixing ratio
+        self.tol = np.float32(tol)                 # Training loss tolerance
+        self.l1_ratio = np.float32(l1_ratio)       # Elastic net mixing ratio
         self.early_stop = bool(early_stopping)     # Early stopping flag
         self.stoic_iter = int(stoic_iter)          # Warm up iterations
 
@@ -189,25 +189,25 @@ class ElasticNetClassifier:
                 raise ValueError(f"There's a NaN or infinity value between X and Y data, please clean your data first.")
 
         if isinstance(X_train, pd.DataFrame):
-            X = X_train.to_numpy(dtype=np.float64)
+            X = X_train.to_numpy(dtype=np.float32)
 
         elif issparse(X_train):
-            X = X_train.toarray().astype(np.float64)
+            X = X_train.toarray().astype(np.float32)
 
         else:
-            X = np.array(X_train, dtype=np.float64)
+            X = np.array(X_train, dtype=np.float32)
 
         if X.ndim != 2:
             raise ValueError(f"Expected 2D array for X, got shape {X.shape}")
         
-        X = np.asarray(X, dtype=np.float64)
+        X = np.asarray(X, dtype=np.float32)
         
         # ========== Label Processing ==========
         classes = np.unique(y_train)
         self.classes = classes
         self.n_classes = len(classes)
         y_one_hot = one_hot_labeling(y_train, classes)
-        Y = np.asarray(y_one_hot, dtype=np.float64)
+        Y = np.asarray(y_one_hot, dtype=np.float32)
         
         n_samples, n_features = X.shape
         n_samples_y, n_classes = Y.shape
@@ -221,7 +221,7 @@ class ElasticNetClassifier:
         n_features_aug = X_aug.shape[1]
 
         # ========== Model Fitting (Coordinate Descent) ==========
-        W = np.zeros((n_features_aug, n_classes), dtype=np.float64)
+        W = np.zeros((n_features_aug, n_classes), dtype=np.float32)
 
         # Precompute squared norms of features
         X_j_squared = np.sum(X_aug ** 2, axis=0)
@@ -244,7 +244,7 @@ class ElasticNetClassifier:
                 else:
                     # ElasticNet update
                     # L2 penalty part
-                    z = X_j_squared[j] + self.alpha * (1 - self.l1_ratio)
+                    z = X_j_squared[j] + self.alpha * (np.int32(1) - self.l1_ratio)
                     # L1 penalty part (soft thresholding)
                     W[j, :] = self._soft_thresholding(rho, self.alpha * self.l1_ratio) / z
 
@@ -283,7 +283,7 @@ class ElasticNetClassifier:
             self.b = W[0, :].reshape(1, -1)     # Changed from self.intercept_
             self.weights = W[1:, :]             # Changed from self.coef_
         else:
-            self.b = np.zeros((1, n_classes), dtype=np.float64) # Changed from self.intercept_
+            self.b = np.zeros((1, n_classes), dtype=np.float32) # Changed from self.intercept_
             self.weights = W                    # Changed from self.coef_
 
         return self
@@ -312,18 +312,18 @@ class ElasticNetClassifier:
                 raise ValueError(f"There's a NaN or infinity value in X_test data, please clean your data first.")
 
         if isinstance(X_test, pd.DataFrame):
-            X = X_test.to_numpy(dtype=np.float64)
+            X = X_test.to_numpy(dtype=np.float32)
 
         elif issparse(X_test):
-            X = X_test.toarray().astype(np.float64)
+            X = X_test.toarray().astype(np.float32)
 
         else:
-            X = np.array(X_test, dtype=np.float64)
+            X = np.array(X_test, dtype=np.float32)
 
         if X.ndim != 2:
             raise ValueError(f"Expected 2D array for X, got shape {X.shape}")
 
-        X = np.asarray(X, dtype=np.float64)
+        X = np.asarray(X, dtype=np.float32)
         n_samples, n_features = X.shape
         
         # ========== Prediction ==========
@@ -331,7 +331,7 @@ class ElasticNetClassifier:
         assert n_features == self.weights.shape[0], f"Feature mismatch: got {n_features}, expected {self.weights.shape[0]}" # Changed from self.coef_
         
         # Calculate raw scores (logits)
-        preds = X @ self.weights + self.b # Changed from self.coef_ and self.intercept_
+        preds = X @ self.weights + self.b
         
         # Choose class with highest score
         pred_class = np.argmax(preds, axis=1)

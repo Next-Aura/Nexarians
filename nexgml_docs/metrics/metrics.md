@@ -18,13 +18,6 @@ from nexgml.metrics import accuracy_score, precision_score, recall_score, f1_sco
 from nexgml.metrics import r2_score
 ```
 
-`Or`
-
-```python
-from nexgml.metrics import forclassi as fc
-from nexgml.metrics import forregress as fr
-```
-
 ## `ForClassi` API Reference
 
 ForClassi module provides NumPy backend operations for common classification evaluation metrics.
@@ -41,7 +34,7 @@ Calculates the mean accuracy on the given test data and labels.
   * **Returns**:
       * (`float`): Mean accuracy score.
   * **Raises**:
-      * `None`
+      * `ValueError`: If the given target label (y_true) is continious.
 
 ### `precision_score(y_true, y_pred)`
 
@@ -53,7 +46,7 @@ Calculates the precision score for binary classification.
   * **Returns**:
       * (`float`): Precision score.
   * **Raises**:
-      * `None`
+      * `ValueError`: If the given target label (y_true) is continious.
 
 ### `recall_score(y_true, y_pred)`
 
@@ -65,7 +58,7 @@ Calculates the recall score for binary classification.
   * **Returns**:
       * (`float`): Recall score.
   * **Raises**:
-      * `None`
+      * `ValueError`: If the given target label (y_true) is continious.
 
 ### `f1_score(y_true, y_pred)`
 
@@ -77,7 +70,7 @@ Calculates the F1 score for binary classification.
   * **Returns**:
       * (`float`): F1 score.
   * **Raises**:
-      * `None`
+      * `ValueError`: If the given target label (y_true) is continious.
 
 ## `ForRegress` API Reference
 
@@ -95,7 +88,7 @@ Calculates the R² (coefficient of determination) regression score function.
   * **Returns**:
       * (`float`): R² score.
   * **Raises**:
-      * `None`
+      * `ValueError`: If the given target label (y_true) is discrete.
 
 ## Usage Examples
 

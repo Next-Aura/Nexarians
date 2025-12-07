@@ -31,25 +31,27 @@ ForLinear module provides NumPy backend operations for common activation, loss, 
 
 -----
 
-### `softmax(z)`
+### `softmax(z, dtype)`
 
 Calculates the numerically stable softmax probability for a given set of logits.
 
   * **Parameters**:
       * `z` (`np.ndarray`): Raw logits, can be 1D or 2D.
+      * `dtype` (`DTypeLike`): Data type output.
   * **Returns**:
       * (`np.ndarray`): Probability scores (summing to 1 across the class axis).
 
-### `sigmoid(z)`
+### `sigmoid(z, dtype=np.float32)`
 
 Calculates the sigmoid (logistic) probability. It attempts to use `scipy.special.expit` for high precision and falls back to a clipped `numpy` implementation if `scipy` is unavailable.
 
   * **Parameters**:
       * `z` (`np.ndarray`): Raw logits.
+      * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`np.ndarray`): Probabilities between 0 and 1.
 
-### `categorical_ce(y_true, y_pred_proba, mean=True, epsilon=1e-8)`
+### `categorical_ce(y_true, y_pred_proba, mean=True, weighting=True, dtype=np.float32, epsilon=1e-8)`
 
 Calculates the categorical cross-entropy loss.
 
@@ -59,11 +61,13 @@ Calculates the categorical cross-entropy loss.
       * `y_true` (`np.ndarray`): True labels, expected in **one-hot encoded** format.
       * `y_pred_proba` (`np.ndarray`): Predicted class probabilities from the model.
       * `mean` (`bool`, default=`True`): If `True`, returns the mean loss over the batch. If `False`, returns the loss for each sample.
+      * `weighting` (`bool`, default=`True`): If `True`, will balancing class losses especially for data with imbalance class.
+      * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
       * `epsilon` (`float`, default=`1e-8`): Small value to prevent zero division error.
   * **Returns**:
       * (`np.ndarray` or `float`): The calculated loss.
 
-### `binary_ce(y_true, y_pred_proba, mean=True, epsilon=1e-8)`
+### `binary_ce(y_true, y_pred_proba, mean=True, dtype=np.float32, epsilon=1e-8)`
 
 Calculates the binary cross-entropy loss for binary classification.
 
@@ -71,41 +75,45 @@ Calculates the binary cross-entropy loss for binary classification.
       * `y_true` (`np.ndarray`): True binary labels (0 or 1).
       * `y_pred_proba` (`np.ndarray`): Predicted probabilities (between 0 and 1).
       * `mean` (`bool`, default=`True`): If `True`, returns the mean loss.
+      * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
       * `epsilon` (`float`, default=`1e-8`): Small value to prevent zero division error.
   * **Returns**:
       * (`np.ndarray` or `float`): The calculated loss.
 
-### `mean_squared_error(y_true, y_pred)`
+### `mean_squared_error(y_true, y_pred, dtype=np.float32)`
 
 Calculates the Mean Squared Error (MSE) regression loss.
 
   * **Parameters**:
       * `y_true` (`np.ndarray`): True continuous target values.
       * `y_pred` (`np.ndarray`): Predicted continuous values.
+      * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`float`): The MSE loss.
 
-### `mean_absolute_error(y_true, y_pred)`
+### `mean_absolute_error(y_true, y_pred, dtype=np.float32)`
 
 Calculates the Mean Absolute Error (MAE) regression loss.
 
   * **Parameters**:
       * `y_true` (`np.ndarray`): True continuous target values.
       * `y_pred` (`np.ndarray`): Predicted continuous values.
+      * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`float`): The MAE loss.
 
-### `root_squared_error(y_true, y_pred)`
+### `root_squared_error(y_true, y_pred, dtype=np.float32)`
 
 Calculates the Root Mean Squared Error (RMSE) regression loss.
 
   * **Parameters**:
       * `y_true` (`np.ndarray`): True continuous target values.
       * `y_pred` (`np.ndarray`): Predicted continuous values.
+      * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`float`): The RMSE loss.
 
-### `smoothl1_loss(y_true, y_pred, delta)`
+### `smoothl1_loss(y_true, y_pred, delta, dtype=np.float32)`
 
 Calculates the Smooth L1 (Huber) Loss, which is less sensitive to outliers than MSE.
 
@@ -113,30 +121,33 @@ Calculates the Smooth L1 (Huber) Loss, which is less sensitive to outliers than 
       * `y_true` (`np.ndarray`): True continuous target values.
       * `y_pred` (`np.ndarray`): Predicted continuous values.
       * `delta` (`float`, default=`0.5`): The threshold point where the function transitions from quadratic to linear.
+      * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`float`): The Smooth L1 loss.
 
-### `lasso(a, alpha)`
+### `lasso(a, alpha, dtype=np.float32)`
 
 Calculates the lasso (L1) penalty.
 
   * **Parameters**:
       * `a` (`np.ndarray`): Argument that'll be regularized.
       * `alpha` (`float`): Penalty strength.
+      * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`float`): The calculated penalty.
 
-### `ridge(a, alpha)`
+### `ridge(a, alpha, dtype=np.float32)`
 
 Calculates the ridge (L2) penalty.
 
   * **Parameters**:
       * `a` (`np.ndarray`): Argument that'll be regularized.
       * `alpha` (`float`): Penalty strength.
+      * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`float`): The calculated penalty.
 
-### `elasticnet(a, alpha, l1_ratio=0.5)`
+### `elasticnet(a, alpha, l1_ratio=0.5, dtype=np.float32)`
 
 Calculates the elastic net penalty.
 
@@ -144,10 +155,11 @@ Calculates the elastic net penalty.
       * `a` (`np.ndarray`): Argument that'll be regularized.
       * `alpha` (`float`): Penalty strength.
       * `l1_ratio` (`float`, default=`0.5`): Penalties ratio between L1 and L2.
+      * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`float`): The calculated penalty.
 
-### `mse_deriv(X, residual, intercept)`
+### `mse_deriv(X, residual, intercept, dtype=np.float32)`
 
 Calculates the Mean Squared Error (MSE) loss function derivative.
 
@@ -155,10 +167,11 @@ Calculates the Mean Squared Error (MSE) loss function derivative.
       * `X` (`np.ndarray`): The data for formula calculation.
       * `residual` (`np.ndarray`): Residual data.
       * `intercept` (`bool`): Intercept flag, if true the function will also calculate grad w.r.t bias.
+      * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`tuple[np.ndarray, float]`): gradient w.r.t weight, gradient w.r.t bias.
 
-### `rmse_deriv(X, residual, intercept)`
+### `rmse_deriv(X, residual, intercept, dtype=np.float32)`
 
 Calculates the Root Mean Squared Error (RMSE) loss function derivative.
 
@@ -166,10 +179,11 @@ Calculates the Root Mean Squared Error (RMSE) loss function derivative.
       * `X` (`np.ndarray`): The data for formula calculation.
       * `residual` (`np.ndarray`): Residual data.
       * `intercept` (`bool`): Intercept flag, if true the function will also calculate grad w.r.t bias.
+      * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`tuple[np.ndarray, float]`): gradient w.r.t weight, gradient w.r.t bias.
 
-### `mae_deriv(X, residual, intercept)`
+### `mae_deriv(X, residual, intercept, dtype=np.float32)`
 
 Calculates the Mean Absolute Error (MAE) loss function derivative.
 
@@ -177,10 +191,11 @@ Calculates the Mean Absolute Error (MAE) loss function derivative.
       * `X` (`np.ndarray`): The data for formula calculation.
       * `residual` (`np.ndarray`): Residual data.
       * `intercept` (`bool`): Intercept flag, if true the function will also calculate grad w.r.t bias.
+      * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`tuple[np.ndarray, float]`): gradient w.r.t weight, gradient w.r.t bias.
 
-### `smoothl1_deriv(X, residual, intercept, delta=0.5)`
+### `smoothl1_deriv(X, residual, intercept, delta=0.5, dtype=np.float32)`
 
 Calculates the Smooth L1 (Huber) loss function derivative.
 
@@ -189,10 +204,11 @@ Calculates the Smooth L1 (Huber) loss function derivative.
       * `residual` (`np.ndarray`): Residual data.
       * `intercept` (`bool`): Intercept flag, if true the function will also calculate grad w.r.t bias.
       * `delta` (`float`, default=`0.5`): Threshold between 2 conditions in the calculation.
+      * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`tuple[np.ndarray, float]`): gradient w.r.t weight, gradient w.r.t bias.
 
-### `cce_deriv(X, residual, intercept, classes)`
+### `cce_deriv(X, residual, intercept, classes, dtype=np.float32)`
 
 Calculates the Categorical Cross-entropy (CCE) loss function derivative.
 
@@ -200,31 +216,34 @@ Calculates the Categorical Cross-entropy (CCE) loss function derivative.
       * `X` (`np.ndarray`): The data for formula calculation.
       * `residual` (`np.ndarray`): Residual data.
       * `intercept` (`bool`): Intercept flag, if true the function will also calculate grad w.r.t bias.
-      * `classes` (`int`): Number of classes, optional.
+      * `classes` (`int`): Number of classes.
+      * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`tuple[np.ndarray, float]`): gradient w.r.t weight, gradient w.r.t bias.
 
-### `lasso_deriv(a, alpha)`
+### `lasso_deriv(a, alpha, dtype=np.float32)`
 
 Calculates the lasso (L1) penalty derivative.
 
   * **Parameters**:
       * `a` (`np.ndarray`): Argument that'll be regularized.
       * `alpha` (`float`): Penalty strength.
+      * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`np.ndarray`): The calculated penalty derivative.
 
-### `ridge_deriv(a, alpha)`
+### `ridge_deriv(a, alpha, dtype=np.float32)`
 
 Calculates the ridge (L2) penalty derivative.
 
   * **Parameters**:
       * `a` (`np.ndarray`): Argument that'll be regularized.
       * `alpha` (`float`): Penalty strength.
+      * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`np.ndarray`): The calculated penalty derivative.
 
-### `elasticnet_deriv(a, alpha, l1_ratio)`
+### `elasticnet_deriv(a, alpha, l1_ratio, dtype=np.float32)`
 
 Calculates the elastic net penalty derivative.
 
@@ -232,6 +251,7 @@ Calculates the elastic net penalty derivative.
       * `a` (`np.ndarray`): Argument that'll be regularized.
       * `alpha` (`float`): Penalty strength.
       * `l1_ratio` (`float`): Penalties ratio between L1 and L2.
+      * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`np.ndarray`): The calculated penalty derivative.
 

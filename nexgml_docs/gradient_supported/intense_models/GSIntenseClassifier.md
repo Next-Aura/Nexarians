@@ -80,7 +80,7 @@ $$
 | `random_state` | `int \| None` | `None` | Seed for shuffling |
 | `early_stopping` | `bool` | `True` | Enable early stop |
 | `verbose` | `int` | `0` | 0 = silent, 1 = progress |
-| `verbosity` | `Literal['light', 'heavy']` | `light` | light = standard log information, heavy = more detail log information |
+| `verbosity` | `Literal['light', 'heavy']` | `'light'` | light = standard log information, heavy = more detail log information |
 | `lr_scheduler` | `Literal['constant','invscaling','plateau', 'adative']` | `'invscaling'` | Type of learning rate scheduler |
 | `optimizer` | `Literal['mbgd','adam','adamw']` | `'mbgd'` | Optimizer type |
 | `batch_size` | `int` | `16` | Mini-batch size |
@@ -89,6 +89,8 @@ $$
 | `factor` | `float` | `0.5` | LR reduction factor for plateau |
 | `stoic_iter` | `int` | `10` | Warm-up epochs before early stop/scheduler |
 | `epsilon` | `float` | `1e-15` | Small value for numerical stability |
+| `adalr_window` | `int` | `5` | Loss window for adaptive learning rate |
+| `start_w_scale` | `float` | `0.01` | Weight initialization scale |
 
 ## Model Attributes (post-fit)
 

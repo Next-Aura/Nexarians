@@ -21,17 +21,18 @@ This class provides static methods for robust and optimized data labeling and in
 
 -----
 
-### `one_hot_labeling(y, classes)`
+### `one_hot_labeling(y, classes, dtype=np.int32)`
 
 Converts an array of categorical or numerical labels into a **one-hot encoded** matrix, required for models using Softmax and Categorical Cross-Entropy (CCE).
 
   * **Parameters**:
       * `y` (`np.ndarray`): 1D array of target labels (e.g., `[0, 1, 0, 2]`).
       * `classes` (`Optional[np.ndarray]`): Array of unique class labels. If `None`, it is determined from `y`.
+      * `dtype` (`DTypeLike`, default=`np.int32`): Data type output.
   * **Returns**:
       * (`np.ndarray`): One-hot encoded matrix (samples × number of classes).
 
-### `integer_labeling(y, classes, to_integer_from='one-hot')`
+### `integer_labeling(y, classes, to_integer_from='one-hot', dtype=np.int32)`
 
 Converts encoded labels back into a 1D array of integer indices or original labels.
 
@@ -41,6 +42,7 @@ Converts encoded labels back into a 1D array of integer indices or original labe
       * `to_integer_from` (`str`, default=`'one-hot'`):
           * `'one-hot'`: Converts a one-hot matrix (`y`) into integer indices (0, 1, 2, ...).
           * `'labels'`: Converts a label array (`y`) into contiguous integer indices (0, 1, 2, ...).
+      * `dtype` (`DTypeLike`, default=`np.int32`): Data type output.
   * **Returns**:
       * (`np.ndarray`): Array of integer indices.
   * **Raises**:

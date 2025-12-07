@@ -1,4 +1,5 @@
 import numpy as np
+from nexgml.guardians import isdiscrete
 
 def accuracy_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     """
@@ -15,7 +16,7 @@ def accuracy_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
         **float**: *Mean accuracy score.*
 
     ## Raises:
-        **None**
+        **ValueError**: *If label data (y_true) is not discrete.*
 
     ## Notes:
       This function only for classifier models.
@@ -28,6 +29,9 @@ def accuracy_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     >>> print("Model's accuracy:", acc)
     ```
     """
+    if not isdiscrete(y_true):
+        raise ValueError("accuracy_score function only calculate discrete label loss.")
+
     # Compare prediction with true labels and compute mean
     return np.mean(y_pred == y_true)
 
@@ -46,7 +50,7 @@ def precision_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
         **float**: *Precision score.*
 
     ## Raises:
-        **None**
+        **ValueError**: *If label data (y_true) is not discrete.*
 
     ## Notes:
       This function only for classifier models.
@@ -59,6 +63,9 @@ def precision_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     >>> print("Model's precision:", precis)
     ```
     """
+    if not isdiscrete(y_true):
+        raise ValueError("precision_score function only calculate discrete label loss.")
+
     true_positives = np.sum((y_pred == 1) & (y_true == 1))
     predicted_positives = np.sum(y_pred == 1)
     
@@ -82,7 +89,7 @@ def recall_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
         **float**: *Recall score.*
 
     ## Raises:
-        **None**
+        **ValueError**: *If label data (y_true) is not discrete.*
 
     ## Notes:
       This function only for classifier models.
@@ -95,6 +102,9 @@ def recall_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     >>> print("Model's recall:", recall)
     ```
     """
+    if not isdiscrete(y_true):
+        raise ValueError("recall_score function only calculate discrete label loss.")
+
     true_positives = np.sum((y_pred == 1) & (y_true == 1))
     actual_positives = np.sum(y_true == 1)
     
@@ -118,7 +128,7 @@ def f1_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
         **float**: *F1 score.*
 
     ## Raises:
-        **None**
+        **ValueError**: *If label data (y_true) is not discrete.*
 
     ## Notes:
       This function only for classifier models.
@@ -131,6 +141,9 @@ def f1_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     >>> print("Model's f1 score:", f1)
     ```
     """
+    if not isdiscrete(y_true):
+        raise ValueError("f1_score function only calculate discrete label loss.")
+
     precision = precision_score(y_true, y_pred)
     recall = recall_score(y_true, y_pred)
     

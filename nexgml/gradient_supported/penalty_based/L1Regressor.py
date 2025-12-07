@@ -103,11 +103,11 @@ class L1Regressor:
           **None**
         """
         # =========== HYPERPARAMETERS ==========
-        self.alpha = float(alpha)                  # Alpha for regularization power
+        self.alpha = np.float32(alpha)             # Alpha for regularization power
         self.intercept = bool(fit_intercept)       # Fit intercept (bias) or not
         self.verbose = int(verbose)                # Model progress logging
         self.max_iter = int(max_iter)              # Model max training iterations
-        self.tol = float(tol)                      # Training loss tolerance
+        self.tol = np.float32(tol)                 # Training loss tolerance
         self.early_stop = bool(early_stopping)     # Early stopping flag
         self.stoic_iter = int(stoic_iter)          # Warm-up iterations before applying early stopping
 
@@ -174,23 +174,18 @@ class L1Regressor:
         """
         # Handle pandas inputs and ensure numpy arrays for dense, keep sparse as sparse
         if 'pandas' in str(type(X_train)):
-            X = X_train.to_numpy(dtype=np.float64)
+            X = X_train.to_numpy(dtype=np.float32)
         if 'pandas' in str(type(y_train)):
-            Y = y_train.to_numpy(dtype=np.float64)
+            Y = y_train.to_numpy(dtype=np.float32)
         
         # Convert non-sparse inputs to numpy array, keep sparse inputs as sparse
         if not issparse(X_train):
-            X = np.asarray(X_train, dtype=np.float64)
+            X = np.asarray(X_train, dtype=np.float32)
         else:
             # Ensure sparse matrix is in a compatible dtype if necessary
-            # Often not needed if input is already float64, but good practice
-            if X_train.dtype != np.float64:
-                X = X_train.astype(np.float64, copy=False) # copy=False avoids copying if dtype is already correct
+            X = X_train.astype(np.float32)
 
-            else:
-                X = X_train
-
-        Y = np.asarray(y_train, dtype=np.float64)
+        Y = np.asarray(y_train, dtype=np.float32)
 
         # Handle single output
         if Y.ndim == 1:
@@ -230,7 +225,7 @@ class L1Regressor:
                  norms[j] = 1e-10 # Prevent division by zero, effectively ignoring this feature's update
 
         # Initialize weights and residuals
-        w = np.zeros((n_features_aug, n_outputs), dtype=np.float64)
+        w = np.zeros((n_features_aug, n_outputs), dtype=np.float32)
         residual = Y.copy() # Residuals: r = Y - X_aug @ w
 
         # Coordinate Descent Loop
@@ -310,7 +305,7 @@ class L1Regressor:
             self.weights = w[1:, :]
         else:
             # Squeeze if single output
-            self.b = np.zeros(n_outputs).squeeze()
+            self.b = np.zeros(n_outputs, dtype=np.float32).squeeze()
             self.weights = w[:, :]
 
         return self
@@ -339,13 +334,13 @@ class L1Regressor:
                 raise ValueError(f"There's a NaN or infinity value in X data, please clean your data first.")
 
         if isinstance(X_test, pd.DataFrame):
-            X = X_test.to_numpy(dtype=np.float64)
+            X = X_test.to_numpy(dtype=np.float32)
 
         elif issparse(X_test):
-            X = X_test.toarray().astype(np.float64)
+            X = X_test.toarray().astype(np.float32)
 
         else:
-            X = np.array(X_test, dtype=np.float64)
+            X = np.array(X_test, dtype=np.float32)
 
         if X.ndim != 2:
             raise ValueError(f"Expected 2D array for X, got shape {X.shape}")

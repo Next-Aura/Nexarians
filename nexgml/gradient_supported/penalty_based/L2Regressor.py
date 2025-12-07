@@ -72,7 +72,7 @@ class L2Regressor:
           **None**
         """
         # ========== HYPERPARAMETERS ==========
-        self.alpha = float(alpha)                               # Alpha for regularization power
+        self.alpha = np.float32(alpha)                          # Alpha for regularization power
         self.intercept = bool(fit_intercept)                    # Fit intercept (bias) or not
     
         self.weights = None                                     # Model weights
@@ -125,19 +125,19 @@ class L2Regressor:
                 raise ValueError(f"There's a NaN or infinity value between X and Y data, please clean your data first.")
         
         if isinstance(X_train, pd.DataFrame):
-            X = X_train.to_numpy(dtype=np.float64)
+            X = X_train.to_numpy(dtype=np.float32)
 
         elif issparse(X_train):
-            X = X_train.toarray().astype(np.float64)
+            X = X_train.toarray().astype(np.float32)
 
         else:
-            X = np.array(X_train, dtype=np.float64)
+            X = np.array(X_train, dtype=np.float32)
 
         if X.ndim != 2:
             raise ValueError(f"Expected 2D array for X, got shape {X.shape}")
 
-        X = np.asarray(X, dtype=np.float64)
-        Y = np.asarray(y_train, dtype=np.float64)
+        X = np.asarray(X, dtype=np.float32)
+        Y = np.asarray(y_train, dtype=np.float32)
         Y = Y.reshape(-1, 1)
         n_samples, n_features = X.shape
         n_samples_y, n_classes = Y.shape
@@ -152,11 +152,11 @@ class L2Regressor:
         # Normal Equation (Ridge Regression: W = (X^T X + alpha*I)^-1 X^T Y)
         XtX = X_aug.T @ X_aug
         d = XtX.shape[0]
-        reg = np.eye(d) * self.alpha
+        reg = np.eye(d, dtype=np.float32) * self.alpha
         
         # Do not regularize the intercept term (first element)
         if self.intercept:
-            reg[0, 0] = 0.0
+            reg[0, 0] = np.float32(0.0)
             
         A = XtX + reg
         Xty = X_aug.T @ Y
@@ -175,7 +175,7 @@ class L2Regressor:
             self.weights = W[1:, :]
             
         else:
-            self.b = np.zeros((1, n_classes), dtype=np.float64)
+            self.b = np.zeros((1, n_classes), dtype=np.float32)
             self.weights = W
 
         return self
@@ -204,19 +204,19 @@ class L2Regressor:
                 raise ValueError(f"There's a NaN or infinity value in X data, please clean your data first.")
 
         if isinstance(X_test, pd.DataFrame):
-            X = X_test.to_numpy(dtype=np.float64)
+            X = X_test.to_numpy(dtype=np.float32)
 
         elif issparse(X_test):
-            X = X_test.toarray().astype(np.float64)
+            X = X_test.toarray().astype(np.float32)
 
         else:
-            X = np.array(X_test, dtype=np.float64)
+            X = np.array(X_test, dtype=np.float32)
 
         if X.ndim != 2:
             raise ValueError(f"Expected 2D array for X, got shape {X.shape}")
 
 
-        X = np.asarray(X, dtype=np.float64)
+        X = np.asarray(X, dtype=np.float32)
         n_samples, n_features = X.shape
         
         # Check if the model has been fitted

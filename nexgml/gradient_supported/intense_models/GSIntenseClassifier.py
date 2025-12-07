@@ -12,7 +12,7 @@ from nexgml.guardians import safe_array        # For numerical stability
 class IntenseClassifier:
     """
     Gradient Supported Intense Classifier (GSIC) is an advanced linear classifier that uses mini-batch gradient descent optimization with softmax for multi-class classification.
-    It supports L1, L2, and Elastic Net regularization to prevent overfitting, along with multiple optimizers (MBGD, Adam, AdamW) and learning rate schedulers (constant, invscaling, plateau).
+    It supports L1, L2, and Elastic Net regularization to prevent overfitting, along with multiple optimizers (MBGD, Adam, AdamW) and learning rate schedulers (constant, invscaling, plateau, adaptive).
     Categorical cross-entropy loss is used.
     Supports sparse matrices for memory efficiency and includes early stopping for robust training.
     
@@ -120,7 +120,9 @@ class IntenseClassifier:
         patience: int=5, 
         factor: float=0.5, 
         stoic_iter: int | None = 10,
-        epsilon: float=1e-15
+        epsilon: float=1e-15,
+        adalr_window: int=5,
+        start_w_scale: float=0.01
             ):
         """
         Initialize the SoftIntenseClassifier model.
@@ -186,6 +188,12 @@ class IntenseClassifier:
             **epsilon**: *float, default=1e-15*
             Small value to avoid numerical instability in calculations.
 
+            **adalr_window**: *int, default=5*
+            Loss window for 'adaptive' learning rate (AdaLR) scheduler.
+
+            **start_w_scale**: *float, default=0.01*
+            Weight initialization scale.
+
         ## Returns:
             **None**
 
@@ -217,23 +225,25 @@ class IntenseClassifier:
         self.max_iter = int(max_iter)              # Maximum number of training iterations (epochs)
         self.penalty = str(penalty)                # Regularization penalty type ('l1', 'l2', 'elasticnet', or None)
         self.lr_scheduler = str(lr_scheduler)      # Learning rate scheduler type ('invscaling', 'constant', 'plateau')
-        self.learning_rate = float(learning_rate)  # Initial learning rate for gradient descent
+        self.learning_rate = np.float32(learning_rate)  # Initial learning rate for gradient descent
         self.alpha = float(alpha)                  # Regularization strength (controls penalty magnitude)
-        self.l1_ratio = float(l1_ratio)            # Elastic net mixing ratio between L1 and L2 (0 to 1)
+        self.l1_ratio = np.float32(l1_ratio)       # Elastic net mixing ratio between L1 and L2 (0 to 1)
         self.intercept = bool(fit_intercept)       # Whether to fit an intercept (bias) term
-        self.tol = float(tol)                      # Tolerance for early stopping based on loss improvement
-        self.power_t = float(power_t)              # Power parameter for inverse scaling learning rate scheduler
-        self.batch_size = int(batch_size)          # Number of samples per batch for mini-batch gradient descent
+        self.tol = np.float32(tol)                 # Tolerance for early stopping based on loss improvement
+        self.power_t = np.float32(power_t)         # Power parameter for inverse scaling learning rate scheduler
+        self.batch_size = np.int32(batch_size)     # Number of samples per batch for mini-batch gradient descent
         self.shuffle = bool(shuffle)               # Whether to shuffle training data each epoch
         self.random_state = random_state           # Random seed for reproducible shuffling and initialization
         self.optimizer = str(optimizer)            # Optimization algorithm ('mbgd', 'adam', 'adamw')
         self.patience = int(patience)              # Number of epochs to wait before reducing learning rate (plateau)
-        self.factor = float(factor)                # Factor by which to reduce learning rate on plateau
+        self.factor = np.float32(factor)           # Factor by which to reduce learning rate on plateau
         self.early_stop = bool(early_stopping)     # Whether to enable early stopping
         self.verbose = int(verbose)                # Verbosity level for training progress logging (0: silent, 1: progress)
         self.stoic_iter = int(stoic_iter)          # Warm-up iterations before applying early stopping and lr scheduler
         self.verbosity = str(verbosity)            # Verbosity level for logging
-        self.epsilon = float(epsilon)              # Small constant to prevent division by zero in computations
+        self.epsilon = np.float32(epsilon)         # Small constant to prevent division by zero in computations
+        self.window = int(adalr_window)            # AdaLR loss window
+        self.w_input = np.float32(start_w_scale)   # Weight initialize scale
 
         # ========== INTERNAL VARIABLES ==========
         self.weights = None                        # Model weights (coefficients) matrix of shape (n_features, n_classes)
@@ -242,7 +252,7 @@ class IntenseClassifier:
         self.classes = None                        # Array of unique class labels from training data
         self.n_classes = 0                         # Number of unique classes (determined during fit)
         self.current_lr = None                     # Current learning rate during training (updated by scheduler)
-        self.best_loss = float('inf')              # Best loss achieved (used for plateau scheduler)
+        self.best_loss = np.float32(np.inf)        # Best loss achieved (used for plateau scheduler)
         self.wait = 0                              # Counter for epochs without improvement (plateau scheduler)
 
         # ---------- Adam/AdamW specific ----------
@@ -251,8 +261,8 @@ class IntenseClassifier:
             self.v_w = None                            # Second moment estimate for weights (Adam/AdamW optimizer)
             self.m_b = None                            # First moment estimate for bias (Adam/AdamW optimizer)
             self.v_b = None                            # Second moment estimate for bias (Adam/AdamW optimizer)
-            self.beta1 = 0.9                           # Exponential decay rate for first moment estimates
-            self.beta2 = 0.999                         # Exponential decay rate for second moment estimates
+            self.beta1 = np.float32(0.9)               # Exponential decay rate for first moment estimates
+            self.beta2 = np.float32(0.999)             # Exponential decay rate for second moment estimates
 
     # ========= HELPER METHODS =========
     def _calculate_loss(self, y_true: np.ndarray, y_pred_proba: np.ndarray) -> float: 
@@ -328,7 +338,7 @@ class IntenseClassifier:
         error = y_pred_proba - y
         # Prediction error (residuals)
         grad_w, grad_b = forlinear.cce_deriv(X, error, self.intercept, self.n_classes)
-        # Bias gradient (mean error per class)
+        # Weight and bias gradient
 
         if self.penalty == 'l1':
             grad_w += forlinear.lasso_deriv(self.weights, self.alpha)
@@ -360,8 +370,8 @@ class IntenseClassifier:
             if X_test.ndim == 1:
                 X_processed = X_test.reshape(-1, 1)
                 # Reshape 1D to 2D
-            X_processed = np.asarray(X_test, dtype=np.float64)
-            # Convert to float64 numpy array
+            X_processed = np.asarray(X_test, dtype=np.float32)
+            # Convert to float32 numpy array
         else:
             X_processed = X_test
             # Keep sparse matrix as is
@@ -406,19 +416,19 @@ class IntenseClassifier:
                 # If 1D array, reshape to 2D
                 X_train = X_train.reshape(-1, 1)
                 # Reshape for single feature
-            X_processed = np.asarray(X_train, dtype=np.float64)
-            # Convert to float64 numpy array
+            X_processed = np.asarray(X_train, dtype=np.float32)
+            # Convert to float32 numpy array
         
         # Keep sparse matrix as is (CSR or CSC)
         else:
             if X_train.shape[0] > X_train.shape[1]:
-              X_processed = X_train.tocsr()
+              X_processed = X_train.tocsr().astype(np.float32)
 
             else:
-              X_processed = X_train.tocsc()
+              X_processed = X_train.tocsc().astype(np.float32)
 
-        y_processed = np.asarray(y_train, dtype=np.float64).ravel()
-        # Convert y to 1D float64 array
+        y_processed = np.asarray(y_train, dtype=np.float32).ravel()
+        # Convert y to 1D float32 array
 
         # ========== DATA VALIDATION ==========
         if issparse(X_processed):
@@ -457,12 +467,12 @@ class IntenseClassifier:
         if self.weights is None or self.weights.shape != (num_features, self.n_classes):
             # Random normal init
             rng = np.random.default_rng(self.random_state)
-            self.weights = rng.normal(0, 0.01, (num_features, self.n_classes)).astype(np.float64)
+            self.weights = rng.normal(0, self.w_input, (num_features, self.n_classes)).astype(np.float32)
         
         # Initialize bias if needed
         if self.intercept and (self.b is None or self.b.shape != (self.n_classes,)):
             # Zero initialization for bias
-            self.b = np.zeros(self.n_classes, dtype=np.float64)
+            self.b = np.zeros(self.n_classes, dtype=np.float32)
         
         # Data label one-hot transform
         y_one_hot = one_hot_labeling(y_processed, self.classes)
@@ -470,27 +480,26 @@ class IntenseClassifier:
         # Initialize Adam/AdamW moments if needed
         if self.optimizer in {'adam', 'adamw'}:
             # First moment for weights
-            self.m_w = np.zeros_like(self.weights)
+            self.m_w = np.zeros_like(self.weights, dtype=np.float32)
             # Second moment for weights
-            self.v_w = np.zeros_like(self.weights)
+            self.v_w = np.zeros_like(self.weights, dtype=np.float32)
             # First moment for bias
-            self.m_b = np.zeros_like(self.b) if self.intercept else None
+            self.m_b = np.zeros_like(self.b, dtype=np.float32) if self.intercept else None
             # Second moment for bias
-            self.v_b = np.zeros_like(self.b) if self.intercept else None
+            self.v_b = np.zeros_like(self.b, dtype=np.float32) if self.intercept else None
         
         # Random number generator for shuffling
         rng = np.random.default_rng(self.random_state)
         # Calculate number of batches
-        num_batches = int(np.ceil(num_samples / self.batch_size))
+        num_batches = np.int32(np.ceil(num_samples / self.batch_size))
         # Initialize current learning rate
         self.current_lr = self.learning_rate
-        # Initialize best loss for early stopping
-        self.best_loss = float('inf')
         # Initialize wait counter for early stopping
         self.wait = 0
         
         # ========== TRAINING LOOP ==========
         for i in range(self.max_iter):
+            i = np.int32(i)
             # ========== LEARNING RATE SCHEDULING ==========
             # Apply LR scheduler after warm-up iterations
             if i > self.stoic_iter:
@@ -500,11 +509,16 @@ class IntenseClassifier:
 
                 elif self.lr_scheduler == 'invscaling':
                     # Inverse scaling decay
-                    self.current_lr = self.learning_rate / ((i + 1)**self.power_t + self.epsilon)
+                    self.current_lr = self.current_lr / ((i + np.int32(1))**self.power_t + self.epsilon)
                 
                 elif self.lr_scheduler == 'adaptive':
                     # Adaptive learning rate based on loss ratio
-                    self.current_lr = min(10.0, max(self.current_lr * (self.loss_history[-1] / self.loss_history[-2]), 1e-8)) if i > 1 else self.current_lr
+                    ratio = np.sqrt(np.mean(self.loss_history[-self.window:], dtype=np.float32) / np.mean(self.loss_history[-2 * self.window:-self.window], dtype=np.float32))
+                    if ratio <= 1:
+                        self.current_lr = np.clip(self.current_lr / (i + 1)**self.power_t, self.epsilon, 10.0, dtype=np.float32)
+
+                    else:
+                        self.current_lr = np.clip(self.current_lr * np.sqrt(ratio), self.epsilon, 10.0, dtype=np.float32)
 
                 elif self.lr_scheduler == 'plateau':
                     # Compute full dataset loss
@@ -543,12 +557,13 @@ class IntenseClassifier:
                 y_shuffled = y_one_hot
 
             # ========== BATCH PROCESSING ==========
-            epoch_loss_sum = 0.0
+            epoch_loss_sum = np.float32(0.0)
             for j in range(num_batches):
+                j = np.int32(j)
                 # Start index for current batch
                 s_idx = j * self.batch_size
                 # End index for current batch
-                e_idx = min((j + 1) * self.batch_size, num_samples)
+                e_idx = min((j + np.int32(1)) * self.batch_size, num_samples)
                 # Extract batch features
                 X_batch = X_shuffled[s_idx:e_idx]
                 # Extract batch labels
@@ -566,40 +581,40 @@ class IntenseClassifier:
 
                 elif self.optimizer == 'adam':
                     # Time step for Adam
-                    t = i * num_batches + j + 1
+                    t = i * num_batches + j + np.int32(1)
                     # Update first moment for weights
-                    self.m_w = self.beta1 * self.m_w + (1 - self.beta1) * grad_w
+                    self.m_w = self.beta1 * self.m_w + (np.int32(1) - self.beta1) * grad_w
                     # Update second moment for weights
-                    self.v_w = self.beta2 * self.v_w + (1 - self.beta2) * (grad_w**2)
+                    self.v_w = self.beta2 * self.v_w + (np.int32(1) - self.beta2) * (grad_w**np.int32(2))
                     # Bias-corrected first moment
-                    m_w_hat = self.m_w / (1 - self.beta1**t)
+                    m_w_hat = self.m_w / (np.int32(1) - self.beta1**t)
                     # Bias-corrected second moment
-                    v_w_hat = self.v_w / (1 - self.beta2**t)
+                    v_w_hat = self.v_w / (np.int32(1) - self.beta2**t)
                     # Update weights
                     self.weights -= self.current_lr * m_w_hat / (np.sqrt(v_w_hat) + self.epsilon)
 
                     if self.intercept:
                         # Update first moment for bias
-                        self.m_b = self.beta1 * self.m_b + (1 - self.beta1) * grad_b
+                        self.m_b = self.beta1 * self.m_b + (np.int32(1) - self.beta1) * grad_b
                         # Update second moment for bias
-                        self.v_b = self.beta2 * self.v_b + (1 - self.beta2) * (grad_b**2)
+                        self.v_b = self.beta2 * self.v_b + (np.int32(1) - self.beta2) * (grad_b**np.int32(2))
                         # Bias-corrected first moment
-                        m_b_hat = self.m_b / (1 - self.beta1**t)
+                        m_b_hat = self.m_b / (np.int32(1) - self.beta1**t)
                         # Bias-corrected second moment
-                        v_b_hat = self.v_b / (1 - self.beta2**t)
+                        v_b_hat = self.v_b / (np.int32(1) - self.beta2**t)
                         # Update bias
                         self.b -= self.current_lr * m_b_hat / (np.sqrt(v_b_hat) + self.epsilon)
                 elif self.optimizer == 'adamw':
                     # Time step for AdamW
-                    t = i * num_batches + j + 1
+                    t = i * num_batches + j + np.int32(1)
                     # Update first moment for weights
-                    self.m_w = self.beta1 * self.m_w + (1 - self.beta1) * grad_w
+                    self.m_w = self.beta1 * self.m_w + (np.int32(1) - self.beta1) * grad_w
                     # Update second moment for weights
-                    self.v_w = self.beta2 * self.v_w + (1 - self.beta2) * (grad_w**2)
+                    self.v_w = self.beta2 * self.v_w + (np.int32(1) - self.beta2) * (grad_w**np.int32(2))
                     # Bias-corrected first moment
-                    m_w_hat = self.m_w / (1 - self.beta1**t)
+                    m_w_hat = self.m_w / (np.int32(1) - self.beta1**t)
                     # Bias-corrected second moment
-                    v_w_hat = self.v_w / (1 - self.beta2**t)
+                    v_w_hat = self.v_w / (np.int32(1) - self.beta2**t)
                     # Update weights
                     self.weights -= self.current_lr * m_w_hat / (np.sqrt(v_w_hat) + self.epsilon)
 
@@ -609,13 +624,13 @@ class IntenseClassifier:
 
                     if self.intercept:
                         # Update first moment for bias
-                        self.m_b = self.beta1 * self.m_b + (1 - self.beta1) * grad_b
+                        self.m_b = self.beta1 * self.m_b + (np.int32(1) - self.beta1) * grad_b
                         # Update second moment for bias
-                        self.v_b = self.beta2 * self.v_b + (1 - self.beta2) * (grad_b**2)
+                        self.v_b = self.beta2 * self.v_b + (np.int32(1) - self.beta2) * (grad_b**np.int32(2))
                         # Bias-corrected first moment
-                        m_b_hat = self.m_b / (1 - self.beta1**t)
+                        m_b_hat = self.m_b / (np.int32(1) - self.beta1**t)
                         # Bias-corrected second moment
-                        v_b_hat = self.v_b / (1 - self.beta2**t)
+                        v_b_hat = self.v_b / (np.int32(1) - self.beta2**t)
                         # Update bias
                         self.b -= self.current_lr * m_b_hat / (np.sqrt(v_b_hat) + self.epsilon)
 
@@ -627,10 +642,7 @@ class IntenseClassifier:
 
             # ========== EPOCH LOSS AND LOGGING ==========
             # Average loss over all batches
-            avg_epoch_loss = epoch_loss_sum / num_batches
-
-            if np.isnan(avg_epoch_loss):
-                avg_epoch_loss = safe_array(avg_epoch_loss)
+            avg_epoch_loss = safe_array(epoch_loss_sum / num_batches)
                 
             # Store epoch loss
             self.loss_history.append(avg_epoch_loss)
@@ -690,7 +702,7 @@ class IntenseClassifier:
 
         if self.classes is not None and len(self.classes) == self.n_classes:
             # Map indices to original classes
-            pred_class = np.array([self.classes[idx] for idx in pred_class])
+            pred_class = np.array([self.classes[idx] for idx in pred_class], dtype=np.int32)
         return pred_class
     
     def score(self, X_test: np.ndarray | spmatrix, y_test: np.ndarray) -> float:

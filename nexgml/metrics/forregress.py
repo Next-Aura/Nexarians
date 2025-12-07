@@ -1,4 +1,5 @@
 import numpy as np
+from nexgml.guardians import iscontinious
 
 def r2_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     """
@@ -15,7 +16,7 @@ def r2_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
         **float**: *R² score.*
 
     ## Raises:
-        **None**
+        **ValueError**: *If label data (y_true) is not continious.*
 
     ## Notes:
       This function only for regressor models.
@@ -28,6 +29,9 @@ def r2_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     >>> print("Model's R² score:", r2)
     ```
     """
+    if not iscontinious(y_true):
+        raise ValueError("R^2 score only calculate continious label loss.")
+    
     ss_res = np.sum((y_true - y_pred) ** 2)
     ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
     

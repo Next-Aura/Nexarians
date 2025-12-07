@@ -1,6 +1,7 @@
-import numpy as np  # Numpy for numerical computations
+import numpy as np                          # Numpy for numerical computations
+from nexgml.guardians import safe_array     # For numerical stability
 
-def categorical_ce(y_true: np.ndarray, y_pred_proba: np.ndarray, mean: bool=True, epsilon: float=1e-8) -> np.ndarray:
+def categorical_ce(y_true: np.ndarray, y_pred_proba: np.ndarray, weighting: bool=True, mean: bool=True, dtype=np.float32, epsilon: float=1e-8) -> np.ndarray | float:
     """
     Calculate classification loss using categorical cross-entropy formula.
 
@@ -11,14 +12,21 @@ def categorical_ce(y_true: np.ndarray, y_pred_proba: np.ndarray, mean: bool=True
         **y_pred_proba**: *np.ndarray*
         Labels prediction probability.
 
+        **weighting**: *bool, default=True*
+        Class weighting for data with imbalance class.
+
         **mean**: *bool, default=True*
         Return loss mean or not.
+
+        **dtype**: *DTypeLike, default=np.float32*
+        Data type output.
 
         **epsilon**: *float*
         Small value for numerical stability.
 
     ## Returns:
-        **np.ndarray**: *Labels prediction probability loss.*
+        **np.ndarray** or **float**: *Labels prediction probability loss. 
+        If mean is True will return float, and if not then will return np.ndarray*
 
     ## Raises:
         **None**
@@ -33,28 +41,30 @@ def categorical_ce(y_true: np.ndarray, y_pred_proba: np.ndarray, mean: bool=True
     >>> loss = categorical_ce(y_true=y, y_pred_proba=pred_proba, mean=True, epsilon=1e-10)
     ```
     """
-    y_pred_proba = np.clip(y_pred_proba, epsilon, 1 - epsilon)
+    y_true, y_pred_proba = np.asarray(y_true, dtype=dtype), np.asarray(y_pred_proba, dtype=dtype)
+    epsilon = dtype(epsilon)
+    y_pred_proba = np.clip(y_pred_proba, epsilon, 1 - epsilon, dtype=dtype)
 
-    class_counts = np.sum(y_true, axis=0)
+    class_counts = np.sum(y_true, axis=0, dtype=dtype)
     n_classes = len(class_counts)
-    total = np.sum(class_counts)
-    class_weights = total / (n_classes * class_counts + 1e-8)
+    total = np.sum(class_counts, dtype=dtype)
+    class_weights = total / (n_classes * (class_counts + epsilon))
 
-    if np.sum(class_weights) == 0:
-        class_weights = np.ones_like(class_weights)
+    if np.sum(class_weights, dtype=dtype) == 0 or not weighting:
+        class_weights = np.ones_like(class_weights, dtype=dtype)
 
     else:
-        class_weights = class_weights / np.sum(class_weights)
+        class_weights = class_weights / np.sum(class_weights, dtype=dtype)
 
-    loss = -np.sum(class_weights * y_true * np.log(y_pred_proba), axis=1)
+    loss = safe_array(-np.sum(class_weights * y_true * np.log(y_pred_proba), axis=1), dtype=dtype)
 
     if mean:
-        return np.mean(loss)
+        return np.mean(loss, dtype=dtype)
     
     else:
         return loss
 
-def binary_ce(y_true: np.ndarray, y_pred_proba: np.ndarray, mean: bool=True, epsilon: float=1e-8) -> np.ndarray:
+def binary_ce(y_true: np.ndarray, y_pred_proba: np.ndarray, mean: bool=True, dtype=np.float32, epsilon: float=1e-8) -> np.ndarray | float:
     """
     Calculate classification loss using binary cross-entropy formula.
 
@@ -68,11 +78,15 @@ def binary_ce(y_true: np.ndarray, y_pred_proba: np.ndarray, mean: bool=True, eps
         **mean**: *bool, default=True*
         Return loss mean or not.
 
+        **dtype**: *DTypeLike, default=np.float32*
+        Data type output.
+
         **epsilon**: *float*
         Small value for numerical stability.
 
     ## Returns:
-        **np.ndarray**: *Labels prediction probability loss.*
+        **np.ndarray** or **float**: *Labels prediction probability loss. 
+        If mean is True will return float, and if not then will return np.ndarray*
 
     ## Raises:
         **None**
@@ -87,17 +101,18 @@ def binary_ce(y_true: np.ndarray, y_pred_proba: np.ndarray, mean: bool=True, eps
     >>> loss = binary_ce(y_true=y, y_pred_proba=pred_proba, mean=True, epsilon=1e-10)
     ```
     """
-    y_pred_clip = np.clip(y_pred_proba, epsilon, 1 - epsilon)
+    epsilon = dtype(epsilon)
+    y_pred_clip = np.clip(y_pred_proba, epsilon, 1 - epsilon, dtype=dtype)
 
-    loss = -(y_true * np.log(y_pred_clip) + (1 - y_true) * np.log(1 - y_pred_clip))
+    loss = safe_array(-(y_true * np.log(y_pred_clip) + (1 - y_true) * np.log(1 - y_pred_clip)), dtype=dtype)
 
     if mean:
-        return np.mean(loss)
+        return np.mean(loss, dtype=dtype)
     
     else:
         return loss
     
-def mean_squared_error(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+def mean_squared_error(y_true: np.ndarray, y_pred: np.ndarray, dtype=np.float32) -> float:
     """
     Calculate regression loss using mean squared error (MSE) formula.
 
@@ -107,6 +122,9 @@ def mean_squared_error(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 
         **y_pred**: *np.ndarray*
         Target prediction.
+
+        **dtype**: *DTypeLike, default=np.float32*
+        Data type output.
 
     ## Returns:
         **float**: *Target prediction loss.*
@@ -124,9 +142,9 @@ def mean_squared_error(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     >>> loss = mean_squared_error(y_true=y, y_pred=pred)
     ```
     """
-    return np.mean((y_true - y_pred)**2)
+    return safe_array(np.mean((y_true - y_pred)**2, dtype=dtype), dtype=dtype)
 
-def mean_absolute_error(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+def mean_absolute_error(y_true: np.ndarray, y_pred: np.ndarray, dtype=np.float32) -> float:
     """
     Calculate regression loss using mean absolute error (MAE) formula.
 
@@ -136,6 +154,9 @@ def mean_absolute_error(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 
         **y_pred**: *np.ndarray*
         Target prediction.
+
+        **dtype**: *DTypeLike, default=np.float32*
+        Data type output.
 
     ## Returns:
         **float**: *Target prediction loss.*
@@ -153,9 +174,9 @@ def mean_absolute_error(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     >>> loss = mean_absolute_error(y_true=y, y_pred=pred)
     ```
     """
-    return np.mean(np.abs(y_true - y_pred))
+    return safe_array(np.mean(np.abs(y_true - y_pred), dtype=dtype), dtype=dtype)
 
-def root_squared_error(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+def root_squared_error(y_true: np.ndarray, y_pred: np.ndarray, dtype=np.float32) -> float:
     """
     Calculate regression loss using root mean squared error (RMSE) formula.
 
@@ -165,6 +186,9 @@ def root_squared_error(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 
         **y_pred**: *np.ndarray*
         Target prediction.
+
+        **dtype**: *DTypeLike, default=np.float32*
+        Data type output.
 
     ## Returns:
         **float**: *Target prediction loss.*
@@ -182,9 +206,9 @@ def root_squared_error(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     >>> loss = root_squared_error(y_true=y, y_pred=pred)
     ```
     """
-    return np.sqrt(np.mean((y_true - y_pred)**2))
+    return safe_array(np.sqrt(np.mean((y_true - y_pred)**2, dtype=dtype)), dtype=dtype)
 
-def smoothl1_loss(y_true: np.ndarray, y_pred: np.ndarray, delta: float=0.5) -> float:
+def smoothl1_loss(y_true: np.ndarray, y_pred: np.ndarray, delta: float=0.5, dtype=np.float32) -> float:
     """
     Calculate regression loss using smooth L1 (huber) loss formula.
 
@@ -196,7 +220,10 @@ def smoothl1_loss(y_true: np.ndarray, y_pred: np.ndarray, delta: float=0.5) -> f
         Target prediction.
         
         **delta**: *float*
-        Function threshold between operation
+        Function threshold between operation.
+
+        **dtype**: *DTypeLike, default=np.float32*
+        Data type output.
 
     ## Returns:
         **float**: *Target prediction loss.*
@@ -217,4 +244,4 @@ def smoothl1_loss(y_true: np.ndarray, y_pred: np.ndarray, delta: float=0.5) -> f
     diff = np.abs(y_true - y_pred)
     loss = np.where(diff < delta, 0.5 * diff**2 / delta, diff - 0.5 * delta)
 
-    return np.mean(loss)
+    return safe_array(np.mean(loss, dtype=dtype), dtype=dtype)

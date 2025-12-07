@@ -2,7 +2,7 @@
 
 NexGML (Next Generation Machine Learning) — educational ML utilities and simple algorithm implementations.
 
-This repository includes a small collection of models and helpers intended for learning and experimentation. The initial release (1.4.0) focuses on:
+This repository includes a small collection of models and helpers intended for learning and experimentation. The initial release (1.5.0) focuses on:
 
 - gradient_supported (linear classifier/regressor)
 - tree_models (decision tree and forest backends)

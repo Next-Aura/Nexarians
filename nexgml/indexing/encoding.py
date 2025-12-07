@@ -1,7 +1,7 @@
 import numpy as np                    # Numpy for numerical computations
 from typing import Optional           # More specific type hints
 
-def one_hot_labeling(y: np.ndarray, classes: Optional[np.ndarray] | None=None) -> np.ndarray:
+def one_hot_labeling(y: np.ndarray, classes: Optional[np.ndarray] | None=None, dtype=np.int32) -> np.ndarray:
     """
     Label one-hot encoding
 
@@ -9,8 +9,11 @@ def one_hot_labeling(y: np.ndarray, classes: Optional[np.ndarray] | None=None) -
         **y**: *np.ndarray*
         Labels data.
 
-        **classes**: *Optional[np.ndarray] | None=None*
+        **classes**: *Optional[np.ndarray], default=None*
         Unique classes from labels data.
+
+        **dtype**: *DTypeLike, default=np.int32*
+        Data type output.
 
     ## Returns
         **np.ndarray**: *one-hot encoded label.*
@@ -34,13 +37,13 @@ def one_hot_labeling(y: np.ndarray, classes: Optional[np.ndarray] | None=None) -
     if classes is None:
         classes = np.unique(y)
 
-    y_one_hot = np.zeros((y.shape[0], len(classes)), dtype=int)
+    y_one_hot = np.zeros((y.shape[0], len(classes)), dtype=dtype)
     for i, cls in enumerate(classes):
-        y_one_hot[:, i] = (y == cls).astype(int)
+        y_one_hot[:, i] = (y == cls).astype(dtype)
         
     return y_one_hot
 
-def integer_labeling(y: np.ndarray, classes: Optional[np.ndarray] | None=None, to_integer_from: str='one-hot') -> np.ndarray:
+def integer_labeling(y: np.ndarray, classes: Optional[np.ndarray] | None=None, to_integer_from: str='one-hot', dtype=np.int32) -> np.ndarray:
     """
     Label integer encoding
 
@@ -53,6 +56,9 @@ def integer_labeling(y: np.ndarray, classes: Optional[np.ndarray] | None=None, t
 
         **to_integer_from**: *str*
         Encode to integer from given argument dtype.
+
+        **dtype**: *DTypeLike, default=np.int32*
+        Data type output.
 
     ## Returns:
         **np.ndarray**: *Array of indices.*
@@ -81,7 +87,7 @@ def integer_labeling(y: np.ndarray, classes: Optional[np.ndarray] | None=None, t
 
     elif to_integer_from == 'labels':
         class_to_int = {cls: i for i, cls in enumerate(classes)}
-        y_integer = np.array([class_to_int[cls] for cls in y])
+        y_integer = np.array([class_to_int[cls] for cls in y], dtype=dtype)
         return y_integer
 
     else:

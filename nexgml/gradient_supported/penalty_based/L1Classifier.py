@@ -104,11 +104,11 @@ class L1Classifier:
             **None**
         """
         # ========== HYPERPARAMETERS ===========
-        self.alpha = float(alpha)                  # Alpha for regularization power
+        self.alpha = np.float32(alpha)             # Alpha for regularization power
         self.intercept = bool(fit_intercept)       # Fit intercept (bias) or not
         self.verbose = int(verbose)                # Model progress logging
         self.max_iter = int(max_iter)              # Model max training iterations
-        self.tol = float(tol)                      # Training loss tolerance
+        self.tol = np.float32(tol)                 # Training loss tolerance
         self.early_stop = bool(early_stopping)     # Early stopping flag
         self.stoic_iter = int(stoic_iter)          # Warm-up iterations before applying early stopping
 
@@ -183,25 +183,25 @@ class L1Classifier:
                 raise ValueError(f"There's a NaN or infinity value between X_train and y_train data, please clean your data first.")
 
         if isinstance(X_train, pd.DataFrame):
-            X = X_train.to_numpy(dtype=np.float64)
+            X = X_train.to_numpy(dtype=np.float32)
 
         elif issparse(X_train):
-            X = X_train.toarray().astype(np.float64)
+            X = X_train.toarray().astype(np.float32)
 
         else:
-            X = np.array(X_train, dtype=np.float64)
+            X = np.array(X_train, dtype=np.float32)
 
         if X.ndim != 2:
             raise ValueError(f"Expected 2D array for X, got shape {X.shape}")
 
-        X = np.asarray(X, dtype=np.float64)
+        X = np.asarray(X, dtype=np.float32)
 
         # ========== Label Processing ==========
         classes = np.unique(y_train)
         self.classes = classes
         self.n_classes = len(classes)
         y_one_hot = one_hot_labeling(y_train, classes)
-        Y = np.asarray(y_one_hot, dtype=np.float64)
+        Y = np.asarray(y_one_hot, dtype=np.float32)
         n_samples, n_features = X.shape
         n_samples_y, n_classes = Y.shape
         assert n_samples == n_samples_y, "Error"
@@ -225,7 +225,7 @@ class L1Classifier:
                 norms[j] = 1e-10  # Prevent division by zero, effectively ignoring this feature's update
 
         # Initialize weights and residuals
-        w = np.zeros((n_features_aug, n_classes), dtype=np.float64)
+        w = np.zeros((n_features_aug, n_classes), dtype=np.float32)
         residual = Y.copy()  # Residuals: r = Y - X_aug @ w
 
         # Coordinate Descent Loop
@@ -301,7 +301,7 @@ class L1Classifier:
             self.b = w[0, :].squeeze()  # Squeeze if single output
             self.weights = w[1:, :]
         else:
-            self.b = np.zeros(n_classes).squeeze()  # Squeeze if single output
+            self.b = np.zeros(n_classes, dtype=np.int32).squeeze()  # Squeeze if single output
             self.weights = w
 
         return self
@@ -330,18 +330,18 @@ class L1Classifier:
                 raise ValueError(f"There's a NaN or infinity value in X data, please clean your data first.")
 
         if isinstance(X_test, pd.DataFrame):
-            X = X_test.to_numpy(dtype=np.float64)
+            X = X_test.to_numpy(dtype=np.float32)
 
         elif issparse(X_test):
-            X = X_test.toarray().astype(np.float64)
+            X = X_test.toarray().astype(np.float32)
 
         else:
-            X = np.array(X_test, dtype=np.float64)
+            X = np.array(X_test, dtype=np.float32)
 
         if X.ndim != 2:
             raise ValueError(f"Expected 2D array for X, got shape {X.shape}")
 
-        X = np.asarray(X, dtype=np.float64)
+        X = np.asarray(X, dtype=np.float32)
         n_samples, n_features = X.shape
         assert self.weights is not None, "Model not fitted"
         assert n_features == self.weights.shape[0], f"Feature mismatch: got {n_features}, expected {self.weights.shape[0]}"
@@ -351,7 +351,7 @@ class L1Classifier:
         pred_class = np.argmax(preds, axis=1)
         # Map indices to original classes
         if self.classes is not None and len(self.classes) == self.n_classes:
-            pred_class = np.array([self.classes[idx] for idx in pred_class])
+            pred_class = np.array([self.classes[idx] for idx in pred_class], dtype=np.int32)
         return pred_class
     
     def score(self, X_test: np.ndarray | spmatrix, y_test: np.ndarray) -> float:

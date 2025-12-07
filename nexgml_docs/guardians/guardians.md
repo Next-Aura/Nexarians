@@ -28,14 +28,16 @@ This module provides static methods for robust and safe numerical array operatio
 
 -----
 
-### `safe_array(arr, max_value=1e10, min_value=-1e10)`
+### `safe_array(arr, min_value=-1e10, max_value=1e10, warn_me=True, dtype=np.float32)`
 
 Safely convert array to finite numbers within specified bounds.
 
   * **Parameters**:
       * `arr` (`np.ndarray`): Input array to be processed.
-      * `max_value` (`float`, default=`1e10`): Maximum allowable value in the array.
       * `min_value` (`float`, default=`-1e10`): Minimum allowable value in the array.
+      * `max_value` (`float`, default=`1e10`): Maximum allowable value in the array.
+      * `warn_me` (`bool`, default=`True`): If True, the function would throw a warning if there's a NaN or infinity value detected.
+      * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`np.ndarray`): Processed array with values clipped to the specified bounds.
   * **Raises**:
@@ -59,11 +61,29 @@ Check if there's an infinity value in an object.
   * **Returns**:
       * (`bool`): Condition if there's a NaN.
 
+### `iscontinious(a)`
+
+Check if an array contain continious value.
+
+  * **Parameters**:
+      * `a` (`np.ndarray, list, spmatrix`): Input to be processed.
+  * **Returns**:
+      * (`bool`): Contidion if there's a continious value.
+
+### `isdiscrete(a)`
+
+Check if an array contain discrete value.
+
+  * **Parameters**:
+      * `a` (`np.ndarray, list, spmatrix`): Input to be processed.
+  * **Returns**:
+      * (`bool`): Contidion if there's a discrete value.
+
 ## Usage Examples
 
 ```python
 import numpy as np
-from nexgml.guardians import safe_array, hasinf, hasnan
+from nexgml.guardians import safe_array, hasinf, hasnan, isdiscrete, iscontinious
 
 # Example with problematic array
 problematic_array = np.array([1.0, np.nan, np.inf, -np.inf, 1e15, -1e15])
@@ -74,9 +94,13 @@ print("Original array:", problematic_array)
 safe_arr = safe_array(problematic_array)
 has_inf = hasinf(problematic_array)
 has_nan = hasnan(problematic_array)
+is_cont = iscontinious(problematic_array)
+is_disc = isdiscrete(problematic_array)
 print("Safe array:", safe_arr)
 print("Has infinity:", has_inf)
 print("Has nan:", has_nan)
+print("Is Continious:", is_cont)
+print("Is Discrete:", is_disc)
 # Output: [ 1.00000000e+00  0.00000000e+00  1.00000000e+10 -1.00000000e+10  1.00000000e+10 -1.00000000e+10]
 # Note: RuntimeWarning may be issued if clipping occurs
 
