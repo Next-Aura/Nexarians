@@ -352,7 +352,8 @@ class ElasticNetRegressor:
             "fit_intercept": self.intercept,
             "tol": self.tol,
             "early_stopping": self.early_stop,
-            "verbose": self.verbose
+            "verbose": self.verbose,
+            "stoic_iter": self.stoic_iter
         }
 
     def set_params(self, **params) -> 'ElasticNetRegressor':

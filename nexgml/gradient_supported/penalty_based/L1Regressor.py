@@ -392,7 +392,8 @@ class L1Regressor:
             "fit_intercept": self.intercept,
             "tol": self.tol,
             "early_stopping": self.early_stop,
-            "verbose": self.verbose
+            "verbose": self.verbose,
+            "stoic_iter": self.stoi_iter
         }
 
     def set_params(self, **params) -> 'L1Regressor':

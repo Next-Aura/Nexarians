@@ -703,7 +703,9 @@ class MRClassifier:
             "factor": self.factor,
             "delta": self.delta,
             "stoic_iter": self.stoic_iter,
-            "epsilon": self.epsilon
+            "epsilon": self.epsilon,
+            "adalr_window": self.window,
+            "start_w_scale": self.w_input
         }
 
     def set_params(self, **params) -> "MRClassifier":
