@@ -334,7 +334,7 @@ def ridge_deriv(a: np.ndarray, alpha: float, dtype: np.float32=np.float32) -> np
     >>> grad = ridge_deriv(a=coef, alpha=alpha)
     ```
     """
-    grad = 2 * dtype(alpha) * np.asarray(a, dtype=dtype)
+    grad = dtype(2) * dtype(alpha) * np.asarray(a, dtype=dtype)
     return grad
 
 def elasticnet_deriv(a: np.ndarray, alpha: float, dtype: np.float32=np.float32, l1_ratio: float=0.5) -> np.ndarray:
@@ -375,7 +375,7 @@ def elasticnet_deriv(a: np.ndarray, alpha: float, dtype: np.float32=np.float32, 
     # L1 part
     l1 = dtype(l1_ratio) * np.sign(a)
     # L2 part
-    l2 = 2 * (dtype(1 - l1_ratio) * a)
+    l2 = dtype(2) * (dtype(1 - l1_ratio) * a)
     # Total with alpha as regulation strength
     grad = dtype(alpha) * (l2 + l1)
     return grad

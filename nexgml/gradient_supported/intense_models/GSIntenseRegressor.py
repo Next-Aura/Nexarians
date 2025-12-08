@@ -712,6 +712,7 @@ class IntenseRegressor:
             **ValueError**: *If model weights are not defined (model not trained).*
         """
         # Check if data is 1D and reshape to 2D if is it
+        X_test = np.asarray(X_test)
         if X_test.ndim == 1:
             X_processed = X_test.reshape(-1, 1).astype(np.float32)
         

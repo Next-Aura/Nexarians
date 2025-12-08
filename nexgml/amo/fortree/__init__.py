@@ -1,6 +1,6 @@
 """*ForTree* module provides common machine learning calculation in tree models.
   ## Provides:
-    - **impurity**: *Focused on label impurity computations.*
+    - **impurities**: *Focused on label impurity computations.*
   
   ## See also:
     - **forlinear**
