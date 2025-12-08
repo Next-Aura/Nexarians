@@ -1,6 +1,6 @@
 import numpy as np  # Numpy for numerical computations
 
-def lasso(a: np.ndarray, alpha: float) -> float:
+def lasso(a: np.ndarray, alpha: float, dtype=np.float32) -> float:
     """
     Calculate lasso (L1) penalty.
 
@@ -10,6 +10,9 @@ def lasso(a: np.ndarray, alpha: float) -> float:
 
         **alpha**: *float*
         Penalty strength.
+
+        **dtype**: *DTypeLike, default=np.float32*
+        Data type output.
 
     ## Returns:
       **float**: *Calculated loss.*
@@ -30,9 +33,9 @@ def lasso(a: np.ndarray, alpha: float) -> float:
     >>> # Print: 'Penalty:  0.000000025'
     ```
     """
-    return alpha * np.sum(np.abs(a))
+    return dtype(alpha) * np.sum(np.abs(a), dtype=dtype)
 
-def ridge(a: np.ndarray, alpha: float) -> float:
+def ridge(a: np.ndarray, alpha: float, dtype=np.float32) -> float:
     """
     Calculate ridge (L2) penalty.
 
@@ -42,6 +45,9 @@ def ridge(a: np.ndarray, alpha: float) -> float:
 
         **alpha**: *float*
         Penalty strength.
+
+        **dtype**: *DTypeLike, default=np.float32*
+        Data type output.
 
     ## Returns:
       **float**: *Calculated loss.*
@@ -62,9 +68,9 @@ def ridge(a: np.ndarray, alpha: float) -> float:
     >>> # Print: Penalty:  0.00000000000625
     ```
     """
-    return alpha * np.sum(a**2)
+    return dtype(alpha) * np.sum(a**2, dtype=dtype)
 
-def elasticnet(a: np.ndarray, alpha: float, l1_ratio: float=0.5) -> float:
+def elasticnet(a: np.ndarray, alpha: float, l1_ratio: float=0.5, dtype=np.float32) -> float:
     """
     Calculate elatic net penalty.
 
@@ -77,6 +83,9 @@ def elasticnet(a: np.ndarray, alpha: float, l1_ratio: float=0.5) -> float:
 
         **l1_ratio**: *float*
         Penalties ratio between L1 and L2.
+
+        **dtype**: *DTypeLike, default=np.float32*
+        Data type output.
 
     ## Returns:
       **float**: *Calculated loss.*
@@ -97,10 +106,11 @@ def elasticnet(a: np.ndarray, alpha: float, l1_ratio: float=0.5) -> float:
     >>> # Print: 'Penalty:  0.0000000150025'
     ```
     """
+    l1_ratio = dtype(l1_ratio)
     # L1 part
-    l1 = l1_ratio * np.sum(np.abs(a))
+    l1 = l1_ratio * np.sum(np.abs(a), dtype=dtype)
     # L2 part
-    l2 = (1 - l1_ratio) * np.sum(a**2)
+    l2 = (dtype(1) - l1_ratio) * np.sum(a**2, dtype=dtype)
     # Total with alpha as regulation strength
-    penalty = alpha * (l1 + l2)
+    penalty = dtype(alpha) * (l1 + l2)
     return penalty

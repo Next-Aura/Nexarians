@@ -1,18 +1,25 @@
 import numpy as np
 from warnings import warn
+from scipy.sparse import issparse, spmatrix
 
-def safe_array(arr: np.ndarray, max_value: float=1e10, min_value: float=-1e10) -> np.ndarray:
+def safe_array(arr: np.ndarray | spmatrix, min_value: float=-1e10, max_value: float=1e10, warn_me: bool=True, dtype: np.float32=np.float32) -> np.ndarray:
     """Safely convert array to finite numbers within specified bounds.
     
     ## Args:
-        **arr**: *np.ndarray* 
+        **arr**: *np.ndarray* or *spmatrix*
         Input array to be processed.
+
+        **min_value**: *float* 
+        Minimum allowable value in the array.
 
         **max_value**: *float* 
         Maximum allowable value in the array.
 
-        **min_value**: *float* 
-        Minimum allowable value in the array.
+        **warn_me**: *bool*
+        If True, throw warning when there's an invalid value.
+
+        **dtype**: *np.float32*
+        Data type output.
 
     ## Returns:
         **np.ndarray**: *Processed array with values clipped to the specified bounds.*
@@ -34,11 +41,23 @@ def safe_array(arr: np.ndarray, max_value: float=1e10, min_value: float=-1e10) -
     ```
     """
     # Replace NaN and inf with finite numbers
-    arr = np.asarray(arr)
-    arr = np.nan_to_num(arr, nan=0.0, posinf=max_value, neginf=min_value)
+    if issparse(arr):
+       arr = arr.astype(dtype)
+
+    else:
+      arr = np.asarray(arr, dtype=dtype)
+    
+    if bool(warn_me):
+        if np.any(np.isnan(arr)):
+            warn("There's NaN(s) during the process.", RuntimeWarning)
+
+        if not np.all(np.isfinite(arr)):
+            warn("There's infinity value(s) during the process.", RuntimeWarning)
+
+    if not np.all(np.isfinite(arr)) or np.any(np.isnan(arr)):
+      arr = np.nan_to_num(arr, nan=0.0, posinf=max_value, neginf=min_value)
+
     # Clip values to avoid extreme overflow
-    arr = np.clip(arr, min_value, max_value)
-    if np.any(arr == min_value) or np.any(arr == max_value) or np.any(arr == 0.0):
-        warn("There's NaN or infinity value.", RuntimeWarning)
+    arr = np.clip(arr, min_value, max_value, dtype=dtype)
 
     return arr

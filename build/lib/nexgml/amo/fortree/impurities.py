@@ -1,4 +1,5 @@
-import numpy as np  # Numpy for numerical computations
+import numpy as np                       # Numpy for numerical computations
+from nexgml.guardians import safe_array  # For numerical stability
 
 def squared_error(y: np.ndarray) -> float:
     """
@@ -34,7 +35,7 @@ def squared_error(y: np.ndarray) -> float:
     # Calculate label mean
     mean = np.mean(y)
     # Calculate label variance (MSE)
-    return np.mean((y - mean) ** 2)
+    return safe_array(np.mean((y - mean) ** 2))
 
 def friedman_squared_error(y: np.ndarray) -> float:
     """
@@ -67,7 +68,7 @@ def friedman_squared_error(y: np.ndarray) -> float:
     if n <= 1:
         return 0.0
     
-    mean = np.mean((y - np.mean(y))**2)
+    mean = safe_array(np.mean((y - np.mean(y))**2))
 
     return mean * (n / (n - 1))
 
@@ -151,7 +152,7 @@ def poisson_deviance(y: np.ndarray) -> float:
         return 0.0
 
     # Calculate labels variance (poisson deviance)
-    return 2.0 * np.sum(y * np.log(np.maximum(y, 1e-9) / mean_y) - (y - mean_y))
+    return safe_array(2.0 * np.sum(y * np.log(np.maximum(y, 1e-9) / mean_y) - (y - mean_y)))
 
 def gini_impurity(y: np.ndarray) -> float:
     """
@@ -236,7 +237,7 @@ def log_loss_impurity(y: np.ndarray) -> float:
         if p > 0:
             log_loss_val -= p * np.log(p)
 
-    return log_loss_val
+    return safe_array(log_loss_val)
 
 def entropy_impurity(y: np.ndarray) -> float:
     """

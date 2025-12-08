@@ -75,20 +75,22 @@ class BasicRegressor:
             penalty: Optional[Literal["l1", "l2", "elasticnet"]] | None="l2", 
             alpha: float=0.0001, 
             l1_ratio: float=0.5, 
-            loss: Literal["mse", "rmse", 'mae'] | None="mse",
+            loss: Literal["mse", "rmse", "mae"] | None="mse",
             fit_intercept: bool=True, 
             tol: float=0.0001,
             shuffle: bool | None=True,
             random_state: int | None=None,
             early_stopping: bool=True,
             verbose: int=0,
-            verbosity: Literal['light', 'heavy'] | None = 'light',
-            lr_scheduler: Literal["constant", "invscaling", 'plateau', 'adaptive'] | None='invscaling',
+            verbosity: Literal["light", "heavy"] | None = "light",
+            lr_scheduler: Literal["constant", "invscaling", "plateau", "adaptive"] | None='invscaling',
             power_t: float=0.25,
             patience: int=5,
             factor: float=0.5,
             stoic_iter: int | None = 10,
-            epsilon: float=1e-15
+            epsilon: float=1e-15,
+            adalr_window: int=5,
+            start_w_scale: float=0.01
             ):
         """
         Initialize the BasicRegressor model.
@@ -151,6 +153,12 @@ class BasicRegressor:
             **epsilon**: *float, default=1e-15*
             Small value to avoid numerical instability in calculations.
 
+            **adalr_window**: *int, default=5*
+            Loss window for 'adaptive' learning rate (AdaLR) scheduler.
+
+            **start_w_scale**: *float, default=0.01*
+            Weight initialization scale.
+
         ## Returns:
             **None**
 
@@ -159,7 +167,7 @@ class BasicRegressor:
             **UserWarning**: *If verbose level 2 is used with heavy verbosity.*
         """
         # ========== PARAMETER VALIDATIONS ==========
-        if penalty not in (None, "l1", "l2", "elasticnet"):
+        if penalty not in (None, 'l1', 'l2', 'elasticnet'):
            raise ValueError(f"Invalid penalty argument, {penalty}. Choose from 'l1', 'l2', or 'elasticnet'.")
 
         if loss not in ('mse', 'rmse', 'mae'):
@@ -176,33 +184,35 @@ class BasicRegressor:
 
         # ========== HYPERPARAMETERS ==========
         self.max_iter = int(max_iter)              # Model max training iterations
-        self.learning_rate = float(learning_rate)  # Learning rate for gradient descent
+        self.learning_rate = np.float32(learning_rate)  # Learning rate for gradient descent
         self.penalty = penalty                     # Penalties for regularization
         self.verbose = int(verbose)                # Model progress logging
         self.verbosity = str(verbosity)            # Verbosity level for logging
         self.intercept = bool(fit_intercept)       # Fit intercept (bias) or not
         self.random_state = random_state           # Random state for reproducibility
-        self.epsilon = float(epsilon)              # For numerical stability
+        self.epsilon = np.float32(epsilon)         # For numerical stability
 
-        self.tol = float(tol)                      # Training loss tolerance for early stopping
+        self.tol = np.float32(tol)                 # Training loss tolerance for early stopping
         self.shuffle = bool(shuffle)               # Data shuffling
         self.loss = str(loss)                      # Loss function
         self.early_stop = bool(early_stopping)     # Early stopping flag
         self.lr_scheduler = lr_scheduler           # Learning rate scheduler type ('invscaling', 'constant', 'plateau', 'adaptive')
-        self.power_t = float(power_t)              # Power parameter for inverse scaling learning rate scheduler
+        self.power_t = np.float32(power_t)         # Power parameter for inverse scaling learning rate scheduler
         self.patience = int(patience)              # Number of epochs to wait before reducing learning rate (plateau)
-        self.factor = float(factor)                # Factor by which to reduce learning rate on plateau
+        self.factor = np.float32(factor)           # Factor by which to reduce learning rate on plateau
         self.stoic_iter = int(stoic_iter)          # Warm-up iterations before applying early stopping and lr scheduler
+        self.window = int(adalr_window)            # AdaLR loss window
+        self.w_input = np.float32(start_w_scale)   # Weight initialize scale
 
-        self.l1_ratio = float(l1_ratio)            # Elastic net mixing ratio
-        self.alpha = float(alpha)                  # Alpha for regularization power
+        self.l1_ratio = np.float32(l1_ratio)       # Elastic net mixing ratio
+        self.alpha = np.float32(alpha)             # Alpha for regularization power
         self.current_lr = None                     # Current epoch learning rate
-        self.best_loss = float('inf')              # Best loss achieved (used for plateau scheduler)
+        self.best_loss = np.float32(np.inf)        # Best loss achieved (used for plateau scheduler)
         self.wait = 0                              # Counter for epochs without improvement (plateau scheduler)
 
         self.loss_history = []                     # Store loss per-iteration
         self.weights = None                        # Moddel weight
-        self.b = 0.0                               # Model bias
+        self.b = np.float32(0.0)                   # Model bias
 
     # ========== HELPER METHODS ==========
     def _calculate_loss(self, y_true: np.ndarray, y_pred: np.ndarray) -> float:
@@ -329,26 +339,30 @@ class BasicRegressor:
         # Check if non-sparse data is 1D and reshape to 2D if is it
         if not issparse(X_train):
           if X_train.ndim == 1:
-            X_processed = X_train.reshape(-1, 1)
+            X_processed = X_train.reshape(-1, 1).astype(np.float32)
 
           else:
-            X_processed = np.asarray(X_train)
+            X_processed = np.asarray(X_train, dtype=np.float32)
 
         # Keep sparse (CSR or CSC)
         else:
             if X_train.shape[0] > X_train.shape[1]:
-              X_processed = X_train.tocsr()
+              X_processed = X_train.tocsr().astype(np.float32)
 
             else:
-              X_processed = X_train.tocsc()
+              X_processed = X_train.tocsc().astype(np.float32)
         
         # Get data shape
         num_samples, num_features = X_processed.shape
+
+        # Random state setup
+        rng = np.random.default_rng(self.random_state)
         
         # Weight initialize if weight is None or the shape is mismatch with data
         if self.weights is None or self.weights.shape[0] != num_features:
-         self.weights = np.zeros(num_features)
-        
+            # Random normal init
+            self.weights = rng.normal(0, self.w_input, num_features).astype(np.float32)
+
         # Make sure y is an array data
         if isinstance(y_train, (np.ndarray, list, tuple)):
             y_processed = np.asarray(y_train)
@@ -357,10 +371,7 @@ class BasicRegressor:
             y_processed = y_train.to_numpy()
         
         # Flattening y data
-        y_processed = y_processed.ravel()
-        
-        # Random state setup for shuffling
-        rng = np.random.default_rng(self.random_state)
+        y_processed = y_processed.ravel().astype(np.float32)
         
         # Check if there's a NaN in X data (handle sparse and dense separately)
         if issparse(X_processed):
@@ -386,6 +397,7 @@ class BasicRegressor:
         
         # ---------- Training loop ----------
         for i in range(self.max_iter):
+            i = np.int32(i)
             # Apply LR scheduler after warm-up iterations
             if i > self.stoic_iter:
                 # Constant learning rate scheduler
@@ -396,11 +408,16 @@ class BasicRegressor:
                 # Invscaling learning rate scheduler
                 elif self.lr_scheduler == 'invscaling':
                     # Inverse scaling decay
-                    self.current_lr = self.current_lr / ((i + 1)**self.power_t + self.epsilon)
+                    self.current_lr = self.current_lr / ((i + np.int32(1))**self.power_t + self.epsilon)
 
                 elif self.lr_scheduler == 'adaptive':
                     # Adaptive learning rate based on loss ratio
-                    self.current_lr = min(10.0, max(self.current_lr * (self.loss_history[-1] / self.loss_history[-2]), 1e-8)) if i > 1 else self.current_lr
+                    ratio = np.sqrt(np.mean(self.loss_history[-self.window:], dtype=np.float32) / np.mean(self.loss_history[-2 * self.window:-self.window], dtype=np.float32))
+                    if ratio <= 1:
+                        self.current_lr = np.clip(self.current_lr / (i + 1)**self.power_t, self.epsilon, 10.0, dtype=np.float32)
+
+                    else:
+                        self.current_lr = np.clip(self.current_lr * np.sqrt(ratio), self.epsilon, 10.0, dtype=np.float32)
                 
                 # Plateau learning rate scheduler
                 elif self.lr_scheduler == 'plateau':
@@ -507,11 +524,11 @@ class BasicRegressor:
         """
         # Check if data is 1D and reshape to 2D if is it
         if X_test.ndim == 1:
-            X_processed = X_test.reshape(-1, 1)
+            X_processed = X_test.reshape(-1, 1).astype(np.float32)
         
         # Or let it as is
         else:
-            X_processed = X_test
+            X_processed = X_test.astype(np.float32)
         
         # Raise an error if weight is None
         if self.weights is None:
@@ -578,7 +595,9 @@ class BasicRegressor:
             "patience": self.patience,
             "factor": self.factor,
             "stoic_iter": self.stoic_iter,
-            "epsilon": self.epsilon
+            "epsilon": self.epsilon,
+            "adalr_window": self.window,
+            "start_w_scale": self.w_input
         }
 
     def set_params(self, **params) -> "BasicRegressor":

@@ -12,7 +12,7 @@ from nexgml.guardians import safe_array       # For numerical stability
 class MRClassifier:
     """
     Mini-batch Regression Classifier (MRC) is a linear classifier that uses mini-batch gradient descent optimization with softmax for multi-class classification.
-    It supports L1, L2, and Elastic Net regularization to prevent overfitting, and learning rate schedulers (constant, invscaling, plateau).
+    It supports L1, L2, and Elastic Net regularization to prevent overfitting, and learning rate schedulers (constant, invscaling, plateau, adaptive).
     Regression loss is used.
     Supports sparse matrices for memory efficiency and includes early stopping for robust training.
     
@@ -102,7 +102,9 @@ class MRClassifier:
         factor: float=0.5, 
         delta: float=1.0,
         stoic_iter: int | None = 10,
-        epsilon: float=1e-15
+        epsilon: float=1e-15,
+        adalr_window: int=5,
+        start_w_scale: float=0.01
             ):
         """
         Initialize the Mini-batch Regression Classifier model.
@@ -171,6 +173,12 @@ class MRClassifier:
             **epsilon**: *float, default=1e-15*
             Small value to avoid numerical instability in calculations.
 
+            **adalr_window**: *int, default=5*
+            Loss window for 'adaptive' learning rate (AdaLR) scheduler.
+
+            **start_w_scale**: *float, default=0.01*
+            Weight initialization scale.
+
         ## Returns:
             **None**
 
@@ -198,24 +206,26 @@ class MRClassifier:
         self.max_iter = int(max_iter)              # Maximum number of training iterations (epochs)
         self.penalty = str(penalty)                # Regularization penalty type ('l1', 'l2', 'elasticnet', or None)
         self.lr_scheduler = str(lr_scheduler)      # Learning rate scheduler type ('invscaling', 'constant', 'plateau')
-        self.learning_rate = float(learning_rate)  # Initial learning rate for gradient descent
-        self.alpha = float(alpha)                  # Regularization strength (controls penalty magnitude)
-        self.l1_ratio = float(l1_ratio)            # Elastic net mixing ratio between L1 and L2 (0 to 1)
+        self.learning_rate = np.float32(learning_rate)  # Initial learning rate for gradient descent
+        self.alpha = np.float32(alpha)             # Regularization strength (controls penalty magnitude)
+        self.l1_ratio = np.float32(l1_ratio)       # Elastic net mixing ratio between L1 and L2 (0 to 1)
         self.intercept = bool(fit_intercept)       # Whether to fit an intercept (bias) term
-        self.tol = float(tol)                      # Tolerance for early stopping based on loss improvement
-        self.power_t = float(power_t)              # Power parameter for inverse scaling learning rate scheduler
-        self.batch_size = int(batch_size)          # Number of samples per batch for mini-batch gradient descent
+        self.tol = np.float32(tol)                 # Tolerance for early stopping based on loss improvement
+        self.power_t = np.float32(power_t)         # Power parameter for inverse scaling learning rate scheduler
+        self.batch_size = np.int32(batch_size)     # Number of samples per batch for mini-batch gradient descent
         self.shuffle = bool(shuffle)               # Whether to shuffle training data each epoch
         self.random_state = random_state           # Random seed for reproducible shuffling and initialization
         self.patience = int(patience)              # Number of epochs to wait before reducing learning rate (plateau)
-        self.factor = float(factor)                # Factor by which to reduce learning rate on plateau
+        self.factor = np.float32(factor)           # Factor by which to reduce learning rate on plateau
         self.early_stop = bool(early_stopping)     # Whether to enable early stopping
         self.verbose = int(verbose)                # Verbosity level for training progress logging (0: silent, 1: progress)
         self.stoic_iter = int(stoic_iter)          # Warm-up iterations before applying early stopping and lr scheduler
         self.loss = str(loss)                      # Loss function type
-        self.delta = float(delta)                  # Huber loss threshold
+        self.delta = np.float32(delta)             # Huber loss threshold
         self.verbosity = str(verbosity)            # Verbosity level for logging
-        self.epsilon = float(epsilon)              # Small constant to prevent division by zero in computations
+        self.epsilon = np.float32(epsilon)         # Small constant to prevent division by zero in computations
+        self.window = int(adalr_window)            # AdaLR loss window
+        self.w_input = np.float32(start_w_scale)   # Weight initialize scale
 
         # ========== INTERNAL VARIABLES ==========
         self.weights = None                        # Model weights (coefficients) matrix of shape (n_features, n_classes)
@@ -224,7 +234,7 @@ class MRClassifier:
         self.classes = None                        # Array of unique class labels from training data
         self.n_classes = 0                         # Number of unique classes (determined during fit)
         self.current_lr = None                     # Current learning rate during training (updated by scheduler)
-        self.best_loss = float('inf')              # Best loss achieved (used for plateau scheduler)
+        self.best_loss = np.float32(np.inf)        # Best loss achieved (used for plateau scheduler)
         self.wait = 0                              # Counter for epochs without improvement (plateau scheduler)
 
     # ========= HELPER METHODS =========
@@ -363,12 +373,12 @@ class MRClassifier:
             if X_test.ndim == 1:
                 # Reshape 1D to 2D
                 X_processed = X_test.reshape(-1, 1)
-                # Convert to float64 numpy array
-            X_processed = np.asarray(X_test, dtype=np.float64)
+                # Convert to float32 numpy array
+            X_processed = np.asarray(X_test, dtype=np.float32)
 
         else:
             # Keep sparse matrix as is
-            X_processed = X_test
+            X_processed = X_test.astype(np.float32)
 
         if self.n_classes == 0:
             raise ValueError("Model not trained. Call fit() first.")
@@ -411,19 +421,19 @@ class MRClassifier:
                 # Reshape for single feature
                 X_train = X_train.reshape(-1, 1)
 
-            # Convert to float64 numpy array
-            X_processed = np.asarray(X_train, dtype=np.float64)
+            # Convert to float32 numpy array
+            X_processed = np.asarray(X_train, dtype=np.float32)
         
         # Keep sparse matrix as is (CSR or CSC)
         else:
             if X_train.shape[0] > X_train.shape[1]:
-              X_processed = X_train.tocsr()
+              X_processed = X_train.tocsr().astype(np.float32)
 
             else:
-              X_processed = X_train.tocsc()
+              X_processed = X_train.tocsc(np.float32)
         
-        # Convert y to 1D float64 array
-        y_processed = np.asarray(y_train, dtype=np.float64).ravel()
+        # Convert y to 1D float32 array
+        y_processed = np.asarray(y_train, dtype=np.float32).ravel()
 
         # ========== DATA VALIDATION ==========
         # Check sparse data for NaN/Inf
@@ -458,23 +468,23 @@ class MRClassifier:
         if self.n_classes < 2:
             raise ValueError("Class label must have at least 2 types.")
         
+        # Random number generator for shuffling
+        rng = np.random.default_rng(self.random_state)
+
         # Initialize weights if needed
         if self.weights is None or self.weights.shape != (num_features, self.n_classes):
             # Zero initialization for weights
-            self.weights = np.zeros((num_features, self.n_classes), dtype=np.float64)
+            self.weights = rng.normal(0, self.w_input, (num_features, self.n_classes)).astype(np.float32)
         
         # Initialize bias if needed
         if self.intercept and (self.b is None or self.b.shape != (self.n_classes,)):
             # Zero initialization for bias
-            self.b = np.zeros(self.n_classes, dtype=np.float64)
+            self.b = np.zeros(self.n_classes, dtype=np.float32)
         
         # Data label one-hot transforms
         y_one_hot = one_hot_labeling(y_processed, self.classes)
-        
-        # Random number generator for shuffling
-        rng = np.random.default_rng(self.random_state)
         # Calculate number of batches
-        num_batches = int(np.ceil(num_samples / self.batch_size))
+        num_batches = np.int32(np.ceil(num_samples / self.batch_size))
         # Initialize current learning rate
         self.current_lr = self.learning_rate
         # Initialize wait counter for early stopping
@@ -482,6 +492,7 @@ class MRClassifier:
         
         # ========== TRAINING LOOP ==========
         for i in range(self.max_iter):
+            i = np.int32(i)
             # ========== LEARNING RATE SCHEDULING ==========
             # Apply LR scheduler after warm-up iterations
             if i > self.stoic_iter:
@@ -493,11 +504,16 @@ class MRClassifier:
                 # Invscaling learning rate scheduler
                 elif self.lr_scheduler == 'invscaling':
                     # Inverse scaling decay
-                    self.current_lr = self.learning_rate / ((i + 1)**self.power_t + self.epsilon)
+                    self.current_lr = self.learning_rate / ((i + np.int32(1))**self.power_t + self.epsilon)
                 
                 elif self.lr_scheduler == 'adaptive':
                     # Adaptive learning rate based on loss ratio
-                    self.current_lr = min(10.0, max(self.current_lr * (self.loss_history[-1] / self.loss_history[-2]), 1e-8)) if i > 1 else self.current_lr
+                    ratio = np.sqrt(np.mean(self.loss_history[-self.window:], dtype=np.float32) / np.mean(self.loss_history[-2 * self.window:-self.window], dtype=np.float32))
+                    if ratio <= 1:
+                        self.current_lr = np.clip(self.current_lr / (i + np.int32(1))**self.power_t, self.epsilon, 10.0, dtype=np.float32)
+
+                    else:
+                        self.current_lr = np.clip(self.current_lr * np.sqrt(ratio), self.epsilon, 10.0, dtype=np.float32)
 
                 # Pleateau learning rate scheduler
                 elif self.lr_scheduler == 'plateau':
@@ -538,12 +554,12 @@ class MRClassifier:
                 y_shuffled = y_one_hot
 
             # ========== BATCH PROCESSING ==========
-            epoch_loss_sum = 0.0
+            epoch_loss_sum = np.float32(0.0)
             for j in range(num_batches):
                 # Start index for current batch
                 s_idx = j * self.batch_size
                 # End index for current batch
-                e_idx = min((j + 1) * self.batch_size, num_samples)
+                e_idx = min((j + np.int32(1)) * self.batch_size, num_samples)
                 # Extract batch features
                 X_batch = X_shuffled[s_idx:e_idx]
                 # Extract batch labels
@@ -566,7 +582,7 @@ class MRClassifier:
 
             # ========== EPOCH LOSS AND LOGGING ==========
             # Average loss over all batches
-            avg_epoch_loss = epoch_loss_sum / num_batches
+            avg_epoch_loss = safe_array(epoch_loss_sum / num_batches)
             # Store epoch losss
             self.loss_history.append(avg_epoch_loss)
 
@@ -625,7 +641,7 @@ class MRClassifier:
 
         if self.classes is not None and len(self.classes) == self.n_classes:
             # Map indices to original classes
-            pred_class = np.array([self.classes[idx] for idx in pred_class])
+            pred_class = np.array([self.classes[idx] for idx in pred_class], dtype=np.int32)
 
         return pred_class
     
@@ -687,7 +703,9 @@ class MRClassifier:
             "factor": self.factor,
             "delta": self.delta,
             "stoic_iter": self.stoic_iter,
-            "epsilon": self.epsilon
+            "epsilon": self.epsilon,
+            "adalr_window": self.window,
+            "start_w_scale": self.w_input
         }
 
     def set_params(self, **params) -> "MRClassifier":

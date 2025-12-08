@@ -13,7 +13,7 @@ from nexgml.guardians import safe_array         # For numerical stability
 class SRClassifier:
     """
     Stocastic Regression Classifier (SRC) is a linear classifier that uses gradient descent optimization with softmax for multi-class classification.
-    It supports L1, L2, and Elastic Net regularization to prevent overfitting, and learning rate schedulers (constant, invscaling, plateau).
+    It supports L1, L2, and Elastic Net regularization to prevent overfitting, and learning rate schedulers (constant, invscaling, plateau, adaptive).
     Uses regression loss fucntion with gradient descent to minimize loss.
     Handle both dense and sparse input matrices.
 
@@ -102,7 +102,9 @@ class SRClassifier:
         factor: float=0.5, 
         delta: float=1.0,
         stoic_iter: int | None = 10,
-        epsilon: float=1e-15
+        epsilon: float=1e-15,
+        adalr_window: int=5,
+        start_w_scale: float=0.01
             ):
         """
         Initialize the Stocastic Regression Classifier model.
@@ -168,6 +170,12 @@ class SRClassifier:
             **epsilon**: *float, default=1e-15*
             Small value to avoid numerical instability in calculations.
 
+            **adalr_window**: *int, default=5*
+            Loss window for 'adaptive' learning rate (AdaLR) scheduler.
+
+            **start_w_scale**: *float, default=0.01*
+            Weight initialization scale.
+
         ## Returns:
             **None**
 
@@ -195,23 +203,25 @@ class SRClassifier:
         self.max_iter = int(max_iter)              # Maximum number of training iterations (epochs)
         self.penalty = str(penalty)                # Regularization penalty type ('l1', 'l2', 'elasticnet', or None)
         self.lr_scheduler = str(lr_scheduler)      # Learning rate scheduler type ('invscaling', 'constant', 'plateau')
-        self.learning_rate = float(learning_rate)  # Initial learning rate for gradient descent
-        self.alpha = float(alpha)                  # Regularization strength (controls penalty magnitude)
-        self.l1_ratio = float(l1_ratio)            # Elastic net mixing ratio between L1 and L2 (0 to 1)
+        self.learning_rate = np.float32(learning_rate)  # Initial learning rate for gradient descent
+        self.alpha = np.float32(alpha)             # Regularization strength (controls penalty magnitude)
+        self.l1_ratio = np.float32(l1_ratio)       # Elastic net mixing ratio between L1 and L2 (0 to 1)
         self.intercept = bool(fit_intercept)       # Whether to fit an intercept (bias) term
-        self.tol = float(tol)                      # Tolerance for early stopping based on loss improvement
-        self.power_t = float(power_t)              # Power parameter for inverse scaling learning rate scheduler
+        self.tol = np.float32(tol)                 # Tolerance for early stopping based on loss improvement
+        self.power_t = np.float32(power_t)         # Power parameter for inverse scaling learning rate scheduler
         self.shuffle = bool(shuffle)               # Whether to shuffle training data each epoch
         self.random_state = random_state           # Random seed for reproducible shuffling and initialization
         self.patience = int(patience)              # Number of epochs to wait before reducing learning rate (plateau)
-        self.factor = float(factor)                # Factor by which to reduce learning rate on plateau
+        self.factor = np.float32(factor)           # Factor by which to reduce learning rate on plateau
         self.early_stop = bool(early_stopping)     # Whether to enable early stopping
         self.verbose = int(verbose)                # Verbosity level for training progress logging (0: silent, 1: progress)
         self.stoic_iter = int(stoic_iter)          # Warm-up iterations before applying early stopping and lr scheduler
         self.loss = str(loss)                      # Loss function type
-        self.delta = float(delta)                  # Huber loss threshold
+        self.delta = np.float32(delta)             # Huber loss threshold
         self.verbosity = str(verbosity)            # Verbosity level for logging
-        self.epsilon = float(epsilon)              # Small constant to prevent division by zero in computations
+        self.epsilon = np.float32(epsilon)         # Small constant to prevent division by zero in computations
+        self.window = int(adalr_window)            # AdaLR loss window
+        self.w_input = np.float32(start_w_scale)   # Weight initialize scale
 
         # ========== INTERNAL VARIABLES ==========
         self.weights = None                        # Model weights (coefficients) matrix of shape (n_features, n_classes)
@@ -220,7 +230,7 @@ class SRClassifier:
         self.classes = None                        # Array of unique class labels from training data
         self.n_classes = 0                         # Number of unique classes (determined during fit)
         self.current_lr = None                     # Current learning rate during training (updated by scheduler)
-        self.best_loss = float('inf')              # Best loss achieved (used for plateau scheduler)
+        self.best_loss = np.float32(np.inf)        # Best loss achieved (used for plateau scheduler)
         self.wait = 0                              # Counter for epochs without improvement (plateau scheduler)
 
 
@@ -369,11 +379,11 @@ class SRClassifier:
                 X_processed = X_test
 
             # Convert to float array
-            X_processed = np.asarray(X_processed, dtype=np.float64)
+            X_processed = np.asarray(X_processed, dtype=np.float32)
 
         else:
             # Keep sparse
-            X_processed = X_test
+            X_processed = X_test.astype(np.float32)
         
         # Check if model is trained
         if self.n_classes == 0:
@@ -425,21 +435,21 @@ class SRClassifier:
                 X_processed = X_train
             
             # Convert to numpy array
-            X_processed = np.asarray(X_processed)
+            X_processed = np.asarray(X_processed, dtype=np.float32)
 
         else:
             # Keep sparse (CSR or CSC depend on the shape)
             if X_train.shape[0] > X_train.shape[1]:
-              X_processed = X_train.tocsr()
+              X_processed = X_train.tocsr().astype(np.float32)
 
             else:
-              X_processed = X_train.tocsc()
+              X_processed = X_train.tocsc().astype(np.float32)
         
         # Get dimensions
         num_samples, num_features = X_processed.shape
         
         # Ensure y is 1D array
-        y_processed = np.asarray(y_train).ravel()
+        y_processed = np.asarray(y_train).ravel().astype(np.float32)
 
         # Check sparse data for NaN/Inf (inspect .data) or dense arrays appropriately
         if issparse(X_processed):
@@ -477,19 +487,20 @@ class SRClassifier:
         y_onehot = one_hot_labeling(y_int, np.arange(self.n_classes))
 
         # ---------- Pre-train process ----------
-        # Initialize weights if needed
-        if self.weights is None or self.weights.shape != (num_features, self.n_classes):
-            # Random normal init
-            rng = np.random.default_rng(self.random_state)
-            self.weights = rng.normal(0, 0.01, (num_features, self.n_classes))
-
-        self.b = np.zeros(self.n_classes)                   # Initialize bias
 
         # RNG for shuffling
         rng = np.random.default_rng(self.random_state)
+        
+        # Initialize weights if needed
+        if self.weights is None or self.weights.shape != (num_features, self.n_classes):
+            # Random normal init
+            self.weights = rng.normal(0, self.w_input, (num_features, self.n_classes)).astype(np.float32)
+
+        self.b = np.zeros(self.n_classes, dtype=np.float32)                   # Initialize bias
         self.current_lr = self.learning_rate
         # Iteration loop
         for i in range(self.max_iter):
+            i = np.int32(i)
             # Shuffle data if enabled
             if self.shuffle:
                 indices = rng.permutation(num_samples)  # Permutation indices
@@ -503,11 +514,16 @@ class SRClassifier:
 
                 elif self.lr_scheduler == 'invscaling':
                     # Inverse scaling decay
-                    self.current_lr = self.learning_rate / ((i + 1)**self.power_t + self.epsilon)
+                    self.current_lr = self.learning_rate / ((i + np.int32(1))**self.power_t + self.epsilon)
                 
                 elif self.lr_scheduler == 'adaptive':
                     # Adaptive learning rate based on loss ratio
-                    self.current_lr = min(10.0, max(self.current_lr * (self.loss_history[-1] / self.loss_history[-2]), 1e-8)) if i > 1 else self.current_lr
+                    ratio = np.sqrt(np.mean(self.loss_history[-self.window:], dtype=np.float32) / np.mean(self.loss_history[-2 * self.window:-self.window], dtype=np.float32))
+                    if ratio <= 1:
+                        self.current_lr = np.clip(self.current_lr / (i + 1)**self.power_t, self.epsilon, 10.0, dtype=np.float32)
+
+                    else:
+                        self.current_lr = np.clip(self.current_lr * np.sqrt(ratio), self.epsilon, 10.0, dtype=np.float32)
 
                 elif self.lr_scheduler == 'plateau':
                     # Compute full dataset loss
@@ -614,7 +630,7 @@ class SRClassifier:
         
         # Map to original class labels
         if self.classes is not None and len(self.classes) == self.n_classes:
-            pred_class = np.array([self.classes[idx] for idx in pred_class])
+            pred_class = np.array([self.classes[idx] for idx in pred_class], dtype=np.int32)
         
         # Return predictions
         return pred_class
@@ -676,7 +692,9 @@ class SRClassifier:
             "factor": self.factor,
             "delta": self.delta,
             "stoic_iter": self.stoic_iter,
-            "epsilon": self.epsilon
+            "epsilon": self.epsilon,
+            "adalr_window": self.window,
+            "start_w_scale": self.w_input
         }
 
     def set_params(self, **params) -> "SRClassifier":

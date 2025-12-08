@@ -77,7 +77,7 @@ class L2Classifier:
             **None**
         """
         # ========== HYPERPARAMETERS ===========
-        self.alpha = float(alpha)                  # Alpha for regularization power
+        self.alpha = np.float32(alpha)             # Alpha for regularization power
         self.intercept = bool(fit_intercept)       # Fit intercept (bias) or not
         
         self.weights = None                        # Model weights
@@ -129,25 +129,25 @@ class L2Classifier:
                 raise ValueError(f"There's a NaN or infinity value between X and Y data, please clean your data first.")
 
         if isinstance(X_train, pd.DataFrame):
-            X = X_train.to_numpy(dtype=np.float64)
+            X = X_train.to_numpy(dtype=np.float32)
 
         elif issparse(X_train):
-            X = X_train.toarray().astype(np.float64)
+            X = X_train.toarray().astype(np.float32)
 
         else:
-            X = np.array(X_train, dtype=np.float64)
+            X = np.array(X_train, dtype=np.float32)
 
         if X.ndim != 2:
             raise ValueError(f"Expected 2D array for X, got shape {X.shape}")
         
-        X = np.asarray(X, dtype=np.float64)
+        X = np.asarray(X, dtype=np.float32)
         
         # ========== Label Processing ==========
         classes = np.unique(y_train)
         self.classes = classes
         self.n_classes = len(classes)
         y_one_hot = one_hot_labeling(y_train, classes)
-        Y = np.asarray(y_one_hot, dtype=np.float64)
+        Y = np.asarray(y_one_hot, dtype=np.float32)
         
         n_samples, n_features = X.shape
         n_samples_y, n_classes = Y.shape
@@ -161,10 +161,10 @@ class L2Classifier:
 
         XtX = X_aug.T @ X_aug
         d = XtX.shape[0]
-        reg = np.eye(d) * self.alpha
+        reg = np.eye(d, dtype=np.float32) * self.alpha
         
         if self.intercept: # Changed from self.fit_intercept
-            reg[0, 0] = 0.0 # Do not regularize the intercept term
+            reg[0, 0] = np.float32(0.0) # Do not regularize the intercept term
             
         A = XtX + reg
         Xty = X_aug.T @ Y
@@ -177,11 +177,11 @@ class L2Classifier:
             W = np.linalg.pinv(A) @ Xty
 
         if self.intercept: # Changed from self.fit_intercept
-            self.b = W[0, :].reshape(1, -1)     # Changed from self.intercept_
-            self.weights = W[1:, :]             # Changed from self.coef_
+            self.b = W[0, :].reshape(1, -1)
+            self.weights = W[1:, :]
         else:
-            self.b = np.zeros((1, n_classes), dtype=np.float64) # Changed from self.intercept_
-            self.weights = W                    # Changed from self.coef_
+            self.b = np.zeros((1, n_classes), dtype=np.float32)
+            self.weights = W
 
         return self
 
@@ -209,18 +209,18 @@ class L2Classifier:
                 raise ValueError(f"There's a NaN or infinity value in X data, please clean your data first.")
 
         if isinstance(X_test, pd.DataFrame):
-            X = X_test.to_numpy(dtype=np.float64)
+            X = X_test.to_numpy(dtype=np.float32)
 
         elif issparse(X_test):
-            X = X_test.toarray().astype(np.float64)
+            X = X_test.toarray().astype(np.float32)
 
         else:
-            X = np.array(X_test, dtype=np.float64)
+            X = np.array(X_test, dtype=np.float32)
 
         if X.ndim != 2:
             raise ValueError(f"Expected 2D array for X, got shape {X.shape}")
         
-        X = np.asarray(X, dtype=np.float64)
+        X = np.asarray(X, dtype=np.float32)
         n_samples, n_features = X.shape
         
         # ========== Prediction ==========
@@ -235,7 +235,7 @@ class L2Classifier:
         
         # Map indices to original classes
         if self.classes is not None and len(self.classes) == self.n_classes:
-            pred_class = np.array([self.classes[idx] for idx in pred_class])
+            pred_class = np.array([self.classes[idx] for idx in pred_class], dtype=np.int32)
             
         return pred_class
     

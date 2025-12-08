@@ -2,6 +2,7 @@
 
   ## Provides:
     - **arr**: *Focused on array numerical stabilities.*
+    - **detect**: *Focused on specific data detection.* 
   
   ## See also:
     - **amo (Advanced Math Operations)**
@@ -10,10 +11,12 @@
     **All the helpers implemented in python programming language.**"""
 
 from .arr import (safe_array)
-from .detect import (hasinf, hasnan)
+from .detect import (hasinf, hasnan, iscontinious, isdiscrete)
 
 __all__ = [
     'safe_array',
     'hasinf',
-    'hasnan'
+    'hasnan',
+    'iscontinious',
+    'isdiscrete'
 ]

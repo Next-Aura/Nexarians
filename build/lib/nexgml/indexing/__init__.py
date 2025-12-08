@@ -1,4 +1,5 @@
 """*Indexing* module provided helper for indexing utilities.
+  
   ## Provides:
     - **encoding**: *Focused on encoding utilities like tranforming labels format.*
     - **indexing**: *Focused on indexing utilities like data slicing.*

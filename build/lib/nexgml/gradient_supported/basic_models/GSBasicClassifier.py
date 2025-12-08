@@ -99,7 +99,9 @@ class BasicClassifier:
             patience: int=5,
             factor: float=0.5,
             stoic_iter: int | None = 10,
-            epsilon: float=1e-15
+            epsilon: float=1e-15,
+            adalr_window: int=5,
+            start_w_scale: float=0.01
             ):
         """
         Initialize the BasicClassifier model.
@@ -159,6 +161,12 @@ class BasicClassifier:
             **epsilon**: *float, default=1e-15*
             Small value to avoid numerical instability in calculations.
 
+            **adalr_window**: *int, default=5*
+            Loss window for 'adaptive' learning rate (AdaLR) scheduler.
+
+            **start_w_scale**: *float, default=0.01*
+            Weight initialization scale.
+
         ## Returns:
             **None**
 
@@ -181,29 +189,31 @@ class BasicClassifier:
 
         # ========== HYPERPARAMETERS ==========
         self.max_iter = int(max_iter)              # Model max training iterations
-        self.learning_rate = float(learning_rate)  # Learning rate for gradient descent
+        self.learning_rate = np.float32(learning_rate)  # Learning rate for gradient descent
         self.intercept = bool(fit_intercept)       # Fit intercept (bias) or not
         self.verbose = int(verbose)                # Model progress logging
-        self.tol = float(tol)                      # Training loss tolerance for early stopping
+        self.tol = np.float32(tol)                 # Training loss tolerance for early stopping
         self.penalty = penalty                     # Penalties for regularization
-        self.alpha = float(alpha)                  # Alpha for regularization power
-        self.l1_ratio = float(l1_ratio)            # Elastic net mixing ratio
+        self.alpha = np.float32(alpha)             # Alpha for regularization power
+        self.l1_ratio = np.float32(l1_ratio)       # Elastic net mixing ratio
         self.shuffle = bool(shuffle)               # Data shuffling
         self.random_state = random_state           # For reproducibility
         self.early_stop = bool(early_stopping)     # Early stopping flag
         self.lr_scheduler = lr_scheduler           # Learning rate scheduler type ('invscaling', 'constant', 'plateau')
-        self.power_t = float(power_t)              # Power parameter for inverse scaling learning rate scheduler
+        self.power_t = np.float32(power_t)         # Power parameter for inverse scaling learning rate scheduler
         self.patience = int(patience)              # Number of epochs to wait before reducing learning rate (plateau)
-        self.factor = float(factor)                # Factor by which to reduce learning rate on plateau
+        self.factor = np.float32(factor)           # Factor by which to reduce learning rate on plateau
         self.stoic_iter = int(stoic_iter)          # Warm-up iterations before applying early stopping and lr scheduler
         self.verbosity = str(verbosity)            # Verbosity level for logging
-        self.epsilon = float(epsilon)              # For numerical stability
+        self.epsilon = np.float32(epsilon)         # For numerical stability
+        self.window = int(adalr_window)            # AdaLR loss window
+        self.w_input = np.float32(start_w_scale)   # Weight initialize scale
 
         self.weights = None                        # Model weights
         self.b = None                              # Model bias
         self.loss_history = []                     # Store loss per-iteration
         self.current_lr = None                     # Current epoch learning rate
-        self.best_loss = float('inf')              # Best loss achieved (used for plateau scheduler)
+        self.best_loss = np.float32(np.inf)        # Best loss achieved (used for plateau scheduler)
         self.wait = 0                              # Counter for epochs without improvement (plateau scheduler)
 
         self.classes = None                        # Unique classes
@@ -228,13 +238,13 @@ class BasicClassifier:
             **None**
         """
         # Clip probabilities to avoid numerical issues
-        y_pred_proba = np.clip(y_pred_proba, self.epsilon, 1 - self.epsilon)
+        y_pred_proba = np.clip(y_pred_proba, self.epsilon, 1 - self.epsilon, dtype=np.float32)
 
         if sample_weights is not None:
             # Weighted cross-entropy
-            loss = -np.sum(y_true * np.log(y_pred_proba) * sample_weights[:, np.newaxis], axis=1)
+            loss = -np.sum(y_true * np.log(y_pred_proba) * sample_weights[:, np.newaxis], axis=1, dtype=np.float32)
             # Mean weighted CE
-            loss = np.mean(loss)
+            loss = np.mean(loss, dtype=np.float32)
         else:
             # Unweighted cross-entropy
             loss = forlinear.categorical_ce(y_true, y_pred_proba)
@@ -249,7 +259,7 @@ class BasicClassifier:
         
         # Elastic Net regularization
         elif self.penalty == 'elasticnet':
-            loss += forlinear.elasticnet(self.weights, self.alpha)
+            loss += forlinear.elasticnet(self.weights, self.alpha, l1_ratio=self.l1_ratio)
         
         # Loss after regularization
         return loss
@@ -303,7 +313,7 @@ class BasicClassifier:
             # Weighted weight gradient
             grad_w = (X.T @ (error * sample_weights[:, np.newaxis])) / X.shape[0]
             # Bias gradient
-            grad_b = np.average(error, weights=sample_weights, axis=0) if self.intercept else np.zeros(self.n_classes)
+            grad_b = np.average(error, weights=sample_weights, axis=0) if self.intercept else np.zeros(self.n_classes, dtype=np.float32)
 
         else:
             # Unweighted weight and biasgradient
@@ -319,7 +329,7 @@ class BasicClassifier:
         
         # Elastic Net regularization
         elif self.penalty == 'elasticnet':
-            grad_w += forlinear.elasticnet_deriv(self.weights, self.alpha)
+            grad_w += forlinear.elasticnet_deriv(self.weights, self.alpha, l1_ratio=self.l1_ratio)
         
         # Return gradients for weights and bias
         return grad_w, grad_b, z
@@ -349,7 +359,7 @@ class BasicClassifier:
                 X_processed = X_test
 
             # Convert to float array
-            X_processed = np.asarray(X_processed, dtype=np.float64)
+            X_processed = np.asarray(X_processed, dtype=np.float32)
 
         else:
             # Keep sparse
@@ -402,10 +412,10 @@ class BasicClassifier:
 
             else:
                 # Or keep as is
-                X_processed = X_train
+                X_processed = X_train.astype(np.float32)
             
             # Convert to numpy array
-            X_processed = np.asarray(X_processed)
+            X_processed = np.asarray(X_processed, dtype=np.float32)
 
         else:
             # Keep sparse (CSR or CSC depend on the shape)
@@ -419,7 +429,7 @@ class BasicClassifier:
         num_samples, num_features = X_processed.shape
         
         # Ensure y is 1D array
-        y_processed = np.asarray(y_train).ravel()
+        y_processed = np.asarray(y_train, dtype=np.float32).ravel()
 
         # Check sparse data for NaN/Inf (inspect .data) or dense arrays appropriately
         if issparse(X_processed):
@@ -454,16 +464,17 @@ class BasicClassifier:
         y_int = integer_labeling(y_processed, self.classes, to_integer_from='labels')
 
         # Get one-hot from integer labels
-        y_onehot = one_hot_labeling(y_int, np.arange(self.n_classes))
+        y_onehot = one_hot_labeling(y_int, np.arange(self.n_classes, dtype=np.int32))
 
         # ---------- Pre-train process ----------
         # Initialize weights if needed
         if self.weights is None or self.weights.shape != (num_features, self.n_classes):
             # Random normal init
             rng = np.random.default_rng(self.random_state)
-            self.weights = rng.normal(0, 0.01, (num_features, self.n_classes))
-
-        self.b = np.zeros(self.n_classes)                   # Initialize bias
+            self.weights = rng.normal(0, self.w_input, (num_features, self.n_classes)).astype(np.float32)
+        
+        # Initialize bias
+        self.b = np.zeros(self.n_classes, dtype=np.float32)
         
         # Class counts (use integer labels mapped from original classes)
         class_counts = np.bincount(y_int, minlength=self.n_classes)
@@ -472,7 +483,7 @@ class BasicClassifier:
         # Class weights for balancing
         class_weights = total_samples / (self.n_classes * class_counts + self.epsilon)
         # Sample weights array
-        sample_weights = np.zeros(num_samples)
+        sample_weights = np.zeros(num_samples, dtype=np.float32)
 
         # Assign weights to samples based on class
         for i, cls in enumerate(self.classes):
@@ -486,6 +497,7 @@ class BasicClassifier:
         self.current_lr = self.learning_rate
         # Iteration loop
         for i in range(self.max_iter):
+            i = np.int32(i)
             # Apply LR scheduler after warm-up iterations
             if i > self.stoic_iter:
                 if self.lr_scheduler == 'constant':
@@ -494,11 +506,16 @@ class BasicClassifier:
 
                 elif self.lr_scheduler == 'invscaling':
                     # Inverse scaling decay
-                    self.current_lr = self.current_lr / ((i + 1)**self.power_t + self.epsilon)
+                    self.current_lr = self.current_lr / ((i + np.int32(1))**self.power_t + self.epsilon)
 
                 elif self.lr_scheduler == 'adaptive':
                     # Adaptive learning rate based on loss ratio
-                    self.current_lr = min(10.0, max(self.current_lr * (self.loss_history[-1] / self.loss_history[-2]), 1e-8)) if i > 1 else self.current_lr
+                    ratio = np.sqrt(np.mean(self.loss_history[-self.window:], dtype=np.float32) / np.mean(self.loss_history[-2 * self.window:-self.window], dtype=np.float32))
+                    if ratio <= 1:
+                        self.current_lr = np.clip(self.current_lr / (i + 1)**self.power_t, self.epsilon, 10.0, dtype=np.float32)
+
+                    else:
+                        self.current_lr = np.clip(self.current_lr * np.sqrt(ratio), self.epsilon, 10.0, dtype=np.float32)
 
                 elif self.lr_scheduler == 'plateau':
                     # Compute full dataset loss
@@ -562,29 +579,29 @@ class BasicClassifier:
             # Check loss for NaN/Inf during training loop
             if not np.isfinite(loss):
                 raise OverflowError(f"Loss became NaN/Inf at epoch {i + 1}. Stopping training early.")
-
+            
             # ========== EARLY STOPPING ==========
             if self.early_stop and i > self.stoic_iter:
                 if abs(self.loss_history[-1] - self.loss_history[-2]) < self.tol:
                     break 
                 
                 if i > 2 * self.stoic_iter:
-                    if abs(np.mean(self.loss_history[-self.stoic_iter:]) - np.mean(self.loss_history[-2*self.stoic_iter:-self.stoic_iter])) < self.tol:
+                    if abs(np.mean(self.loss_history[-self.stoic_iter:], dtype=np.float32) - np.mean(self.loss_history[-2*self.stoic_iter:-self.stoic_iter], dtype=np.float32)) < self.tol:
                         break
 
             # Light verbose logging
             if self.verbose == 1 and ((i % max(1, self.max_iter // 20)) == 0 or i < 5) and self.verbosity == 'light':
-                print(f"Epoch {i+1}/{self.max_iter}. Loss: {loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {np.mean(self.b):.6f}")
+                print(f"Epoch {i+1}/{self.max_iter}. Loss: {loss:.6f}, Avg Weights: {np.mean(self.weights, dtype=np.float32):.6f}, Avg Bias: {np.mean(self.b, dtype=np.float32):.6f}")
 
             elif self.verbose == 2 and self.verbosity == 'light':
-                print(f"Epoch {i+1}/{self.max_iter}. Loss: {loss:.6f}, Avg Weights: {np.mean(self.weights):.6f}, Avg Bias: {np.mean(self.b):.6f}")
+                print(f"Epoch {i+1}/{self.max_iter}. Loss: {loss:.6f}, Avg Weights: {np.mean(self.weights, dtype=np.float32):.6f}, Avg Bias: {np.mean(self.b, dtype=np.float32):.6f}")
 
             # Heavy verbose logging
             if self.verbose == 1 and ((i % max(1, self.max_iter // 20)) == 0 or i < 5) and self.verbosity == 'heavy':
-                print(f"Epoch {i+1}/{self.max_iter}. Loss: {loss:.8f}, Avg Weights: {np.mean(self.weights):.8f}, Avg Bias: {np.mean(self.b):.8f}, Current LR: {self.current_lr:.8f}")
+                print(f"Epoch {i+1}/{self.max_iter}. Loss: {loss:.8f}, Avg Weights: {np.mean(self.weights, dtype=np.float32):.8f}, Avg Bias: {np.mean(self.b, dtype=np.float32):.8f}, Current LR: {self.current_lr:.8f}")
 
             elif self.verbose == 2 and self.verbosity == 'heavy':
-                print(f"Epoch {i+1}/{self.max_iter}. Loss: {loss:.8f}, Avg Weights: {np.mean(self.weights):.8f}, Avg Bias: {np.mean(self.b):.8f}, Current LR: {self.current_lr:.8f}")
+                print(f"Epoch {i+1}/{self.max_iter}. Loss: {loss:.8f}, Avg Weights: {np.mean(self.weights, dtype=np.float32):.8f}, Avg Bias: {np.mean(self.b, dtype=np.float32):.8f}, Current LR: {self.current_lr:.8f}")
 
     def predict(self, X_test: np.ndarray | spmatrix) -> np.ndarray:
         """
@@ -608,7 +625,7 @@ class BasicClassifier:
         
         # Map to original class labels
         if self.classes is not None and len(self.classes) == self.n_classes:
-            pred_class = np.array([self.classes[idx] for idx in pred_class])
+            pred_class = np.array([self.classes[idx] for idx in pred_class], dtype=np.int32)
         
         # Return predictions
         return pred_class
@@ -668,7 +685,9 @@ class BasicClassifier:
             "patience": self.patience,
             "factor": self.factor,
             "stoic_iter": self.stoic_iter,
-            "epsilon": self.epsilon
+            "epsilon": self.epsilon,
+            "adalr_window": self.window,
+            "start_w_scale": self.w_input
         }
 
     def set_params(self, **params) -> 'BasicClassifier':

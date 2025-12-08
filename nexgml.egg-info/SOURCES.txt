@@ -15,7 +15,7 @@ nexgml/amo/forlinear/losses.py
 nexgml/amo/forlinear/penalties.py
 nexgml/amo/forlinear/probas.py
 nexgml/amo/fortree/__init__.py
-nexgml/amo/fortree/impurity.py
+nexgml/amo/fortree/impurities.py
 nexgml/gradient_supported/__init__.py
 nexgml/gradient_supported/basic_models/GSBasicClassifier.py
 nexgml/gradient_supported/basic_models/GSBasicRegressor.py

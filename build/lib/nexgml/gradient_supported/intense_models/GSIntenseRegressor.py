@@ -12,7 +12,7 @@ class IntenseRegressor:
     """
     Gradient Supported Intense Regressor (GSIR) is an advanced linear regression model that uses gradient descent optimization with mini-batch support. 
     It supports L1, L2, and Elastic Net regularization to prevent overfitting, multiple optimizers (MBGD, Adam, AdamW), and various learning rate schedulers.
-    MSE, RMSE, MAE, and Huber loss functions are available.
+    MSE, RMSE, MAE, and SmoothL1 loss functions are available.
 
     It supports L1, L2, and Elastic Net regularization, along with learning 
     rate scheduling and early stopping to optimize training.
@@ -115,7 +115,9 @@ class IntenseRegressor:
         factor: float=0.5, 
         delta: int=0.5,
         stoic_iter: int | None = 10,
-        epsilon: float=1e-15
+        epsilon: float=1e-15,
+        adalr_window: int=5,
+        start_w_scale: float=0.01
         ):
         """
         Initialize the IntenseRegressor model.
@@ -136,8 +138,8 @@ class IntenseRegressor:
             **l1_ratio**: *float, default=0.5*
             Mixing parameter for elastic net (0 <= l1_ratio <= 1).
 
-            **loss**: *{'mse', 'rmse', 'mae', 'huber'}, default='mse'*
-            Type of loss function. Includes Huber loss for robustness.
+            **loss**: *{'mse', 'rmse', 'mae', 'smoothl1'}, default='mse'*
+            Type of loss function. Includes SmoothL1 loss for robustness.
 
             **fit_intercept**: *bool, default=True*
             If True, include a bias term (intercept).
@@ -185,6 +187,12 @@ class IntenseRegressor:
             **stoic_iter**: *int or None, default=10*
             Number of initial epochs to skip before checking for convergence/tolerance in early stopping.
 
+            **adalr_window**: *int, default=5*
+            Loss window for 'adaptive' learning rate (AdaLR) scheduler.
+            
+            **start_w_scale**: *float, default=0.01*
+            Weight initialization scale.
+
         ## Returns:
             **None**
 
@@ -218,50 +226,52 @@ class IntenseRegressor:
 
         # ========== HYPERPARAMETERS ==========
         self.max_iter = int(max_iter)                           # Model max training iterations
-        self.learning_rate = float(learning_rate)               # Initial learning rate
+        self.learning_rate = np.float32(learning_rate)          # Initial learning rate
         self.penalty = str(penalty)                             # Penalties for regularization
-        self.alpha = float(alpha)                               # Alpha for regularization power
-        self.l1_ratio = float(l1_ratio)                         # Elastic net mixing ratio
+        self.alpha = np.float32(alpha)                          # Alpha for regularization power
+        self.l1_ratio = np.float32(l1_ratio)                    # Elastic net mixing ratio
         self.loss = str(loss)                                   # Loss function
         self.intercept = bool(fit_intercept)                    # Fit intercept (bias) or not
-        self.tol = float(tol)                                   # Training loss tolerance
+        self.tol = np.float32(tol)                              # Training loss tolerance
         self.shuffle = bool(shuffle)                            # Data shuffling
         self.random_state = random_state                        # Random state for reproducibility
         self.early_stop = bool(early_stopping)                  # Early stopping flag
         self.verbose = int(verbose)                             # Model progress logging
         self.verbosity = str(verbosity)                         # Verbosity level for logging
-        
+        self.window = int(adalr_window)                         # AdaLR loss window
+        self.w_input = np.float32(start_w_scale)                # Weight initialize scale
+
         self.lr_scheduler = str(lr_scheduler)                   # Learning rate scheduler method
         self.optimizer = str(optimizer)                         # Optimizer type
-        self.batch_size = int(batch_size)                       # Batch size
-        self.power_t = float(power_t)                           # Invscaling power
+        self.batch_size = np.int32(batch_size)                  # Batch size
+        self.power_t = np.float32(power_t)                      # Invscaling power
         self.patience = int(patience)                           # Patience for plateau scheduler
-        self.factor = float(factor)                             # Plateau scheduler factor
-        self.delta = float(delta)                               # Huber loss threshold
+        self.factor = np.float32(factor)                        # Plateau scheduler factor
+        self.delta = np.float32(delta)                          # Smoothl1 loss threshold
         self.stoic_iter = int(stoic_iter)                       # Warm-up iterations before applying early stopping and lr scheduler
-        self.epsilon = float(epsilon)                           # Small value for stability
+        self.epsilon = np.float32(epsilon)                      # Small value for stability
 
         # ========== INTERNAL VARIABLES ==========
         self.loss_history = []                                  # Store loss per-iteration
         self.weights = None                                     # Model weights
-        self.b = 0.0                                            # Model bias
+        self.b = np.float32(0.0)                                # Model bias
         self.current_lr = None                                  # Store current learning rate per-iteration
-        self.best_loss = float('inf')                           # Initial best loss for plateau
+        self.best_loss = np.float32(np.inf)                     # Initial best loss for plateau
         self.wait = 0                                           # Wait counter for plateau scheduler
         
         # ---------- Adam/AdamW specific ----------
         if self.optimizer == 'adam' or self.optimizer == 'adamw': 
             self.m_w = None                                     # First moment vector for weights
             self.v_w = None                                     # Second moment vector for weights
-            self.beta1 = 0.9                                    # Decay rate for the first moment estimates
-            self.beta2 = 0.999                                  # Decay rate for the second moment estimates
-            self.m_b = 0.0                                      # First moment for bias
-            self.v_b = 0.0                                      # Second moment for bias
+            self.beta1 = np.float32(0.9)                        # Decay rate for the first moment estimates
+            self.beta2 = np.float32(0.999)                      # Decay rate for the second moment estimates
+            self.m_b = np.float32(0.0)                          # First moment for bias
+            self.v_b = np.float32(0.0)                          # Second moment for bias
 
     # ========== HELPER METHODS  ==========
     def _calculate_loss(self, y_true: np.ndarray, y_pred: np.ndarray) -> float:
         """
-        Calculating loss with regulation, MSE, RMSE, MAE, and Huber available.
+        Calculating loss with regulation, MSE, RMSE, MAE, and Smooth L1 available.
         Penalty, l1, l2, elasticnet available.
         
         ## Args:
@@ -364,7 +374,7 @@ class IntenseRegressor:
 
         # L2 penalty gradient for AdamW (zero because weight decay handles it separately)
         elif self.penalty == "l2" and self.optimizer == "adamw":
-            grad_w += np.zeros_like(self.weights) 
+            grad_w += np.zeros_like(self.weights, dtype=np.float32) 
         
         # Elastic Net penalty gradient
         elif self.penalty == "elasticnet":
@@ -396,19 +406,19 @@ class IntenseRegressor:
         if isinstance(X_train, spmatrix):
             # Keep as is for sparse (CSR or CSC)
             if X_train.shape[0] > X_train.shape[1]:
-              X_processed = X_train.tocsr()
+              X_processed = X_train.tocsr().astype(np.float32)
 
             else:
-              X_processed = X_train.tocsc()
+              X_processed = X_train.tocsc().astype(np.float32)
         
         # Other data types check
         elif isinstance(X_train, (np.ndarray, list, tuple)):
             # Convert to numpy array
-            X_processed = np.asarray(X_train)
+            X_processed = np.asarray(X_train, dtype=np.float32)
 
         else:
             # Convert DataFrame to numpy array
-            X_processed = X_train.to_numpy()
+            X_processed = X_train.to_numpy().astype(np.float32)
         
         # Check if the data is 1D
         if X_processed.ndim == 1:
@@ -425,7 +435,7 @@ class IntenseRegressor:
             y_processed = y_train.to_numpy()
         
         # Flattening y data
-        y_processed = y_processed.ravel()
+        y_processed = y_processed.ravel().astype(np.float32)
         
         # Sparse data check
         if issparse(X_processed):
@@ -449,8 +459,6 @@ class IntenseRegressor:
                 f"must match number of samples in y_train ({y_processed.shape[0]})."
             )
         
-        # Pre-train process
-
         # Number of samples and features
         num_samples, num_features = X_processed.shape
 
@@ -458,7 +466,7 @@ class IntenseRegressor:
         rng = np.random.default_rng(self.random_state)
 
         # Number of batches
-        num_batch = int(np.ceil(num_samples / self.batch_size))
+        num_batch = np.int32(np.ceil(num_samples / self.batch_size))
 
         # RNG for weight initialization
         rng_init = np.random.default_rng(self.random_state)
@@ -466,18 +474,12 @@ class IntenseRegressor:
         # Check if weights is available or matches feature size
         if self.weights is None or self.weights.shape[0] != num_features:
           # Weight initialization
-          self.weights = rng_init.normal(loc=0.0, scale=0.01, size=num_features)
-      
-        if self.intercept:
-          # Bias initialization if intercept is used
-          self.b = rng_init.normal(loc=0.0, scale=0.01)
+          self.weights = rng_init.normal(loc=0.0, scale=self.w_input, size=num_features).astype(np.float32)
         
         # Additional initialization for Adam and AdamW optimizers
         if self.optimizer in ['adam', 'adamw']:
-            self.m_w = np.zeros_like(self.weights)
-            self.v_w = np.zeros_like(self.weights)
-            self.m_b = 0.0
-            self.v_b = 0.0
+            self.m_w = np.zeros_like(self.weights, dtype=np.float32)
+            self.v_w = np.zeros_like(self.weights, dtype=np.float32)
         
         # Current learning rate initialization
         self.current_lr = self.learning_rate
@@ -485,6 +487,7 @@ class IntenseRegressor:
         # ---------- Training loop ----------
 
         for i in range(self.max_iter):
+            i = np.int32(i)
             if i > self.stoic_iter:
                 # Constant learning rate
                 if self.lr_scheduler == 'constant':
@@ -492,11 +495,16 @@ class IntenseRegressor:
                 
                 # Invscaling learning rate scheduler
                 elif self.lr_scheduler == 'invscaling':
-                    self.current_lr = self.current_lr / ((i + 1)**self.power_t + self.epsilon)
+                    self.current_lr = self.current_lr / ((i + np.int32(1))**self.power_t + self.epsilon)
                 
                 elif self.lr_scheduler == 'adaptive':
                     # Adaptive learning rate based on loss ratio
-                    self.current_lr = min(10.0, max(self.current_lr * (self.loss_history[-1] / self.loss_history[-2]), 1e-8)) if i > 1 else self.current_lr
+                    ratio = np.sqrt(np.mean(self.loss_history[-self.window:], dtype=np.float32) / np.mean(self.loss_history[-2 * self.window:-self.window], dtype=np.float32))
+                    if ratio <= 1:
+                        self.current_lr = np.clip(self.current_lr / (i + np.int32(1))**self.power_t, self.epsilon, 10.0, dtype=np.float32)
+
+                    else:
+                        self.current_lr = np.clip(self.current_lr * np.sqrt(ratio), self.epsilon, 10.0, dtype=np.float32)
 
                 elif self.lr_scheduler == 'plateau':
                         # Get current loss
@@ -544,10 +552,11 @@ class IntenseRegressor:
             
             # Batch processing
             for j in range(num_batch):
+                j = np.int32(j)
                 # Start index
                 s_idx = j * self.batch_size
                 # End index
-                e_idx = min((j + 1) * self.batch_size, num_samples)
+                e_idx = min((j + np.int32(1)) * self.batch_size, np.int32(num_samples))
 
                 # X data slicing
                 X_batch = X_shuffled[s_idx:e_idx]
@@ -570,16 +579,16 @@ class IntenseRegressor:
                 # Adam optimizer
                 elif self.optimizer == 'adam':
                     # Time step
-                    t = i * num_batch + j + 1
+                    t = i * num_batch + j + np.int32(1)
 
                     # First moment update for weights
-                    self.m_w = self.beta1 * self.m_w + (1 - self.beta1) * grad_w
+                    self.m_w = self.beta1 * self.m_w + (np.int32(1) - self.beta1) * grad_w
 
                     # Second moment update for weights
-                    self.v_w = self.beta2 * self.v_w + (1 - self.beta2) * (grad_w**2)
+                    self.v_w = self.beta2 * self.v_w + (np.int32(1) - self.beta2) * (grad_w**np.int32(2))
 
                     # Bias-corrected first moment for weights
-                    m_w_hat = self.m_w / (1 - self.beta1**t)
+                    m_w_hat = self.m_w / (np.int32(1) - self.beta1**t)
 
                     # Bias-corrected second moment for weights
                     v_w_hat = self.v_w / (1- self.beta2**t)
@@ -590,35 +599,35 @@ class IntenseRegressor:
                     # Intercept condition
                     if self.intercept:
                         # First moment update for bias
-                        self.m_b = self.beta1 * self.m_b + (1 - self.beta1) * grad_b
+                        self.m_b = self.beta1 * self.m_b + (np.int32(1) - self.beta1) * grad_b
 
                         # Second moment update for bias
-                        self.v_b = self.beta2 * self.v_b + (1 - self.beta2) * (grad_b**2)
+                        self.v_b = self.beta2 * self.v_b + (np.int32(1) - self.beta2) * (grad_b**np.int32(2))
 
                         # Bias-corrected first moment for bias
-                        m_b_hat = self.m_b / (1 - self.beta1**t)
+                        m_b_hat = self.m_b / (np.int32(1) - self.beta1**t)
 
                         # Bias-corrected second moment for bias
-                        v_b_hat = self.v_b / (1- self.beta2**t)
+                        v_b_hat = self.v_b / (np.int32(1) - self.beta2**t)
 
                         # Bias calculation
                         self.b -= self.current_lr * m_b_hat / (np.sqrt(v_b_hat) + self.epsilon)
 
                 elif self.optimizer == 'adamw':                                                        # AdamW optimizer
                         # Time step
-                        t = i * num_batch + j + 1
+                        t = i * num_batch + j + np.int32(1)
 
                         # First moment update for weights
-                        self.m_w = self.beta1 * self.m_w + (1 - self.beta1) * grad_w
+                        self.m_w = self.beta1 * self.m_w + (np.int32(1) - self.beta1) * grad_w
 
                         # Second moment update for weights
-                        self.v_w = self.beta2 * self.v_w + (1 - self.beta2) * (grad_w**2)
+                        self.v_w = self.beta2 * self.v_w + (np.int32(1) - self.beta2) * (grad_w**np.int32(2))
 
                         # Bias-corrected first moment for weights
-                        m_w_hat = self.m_w / (1 - self.beta1**t)
+                        m_w_hat = self.m_w / (np.int32(1) - self.beta1**t)
 
                         # Bias-corrected second moment for weights
-                        v_w_hat = self.v_w / (1 - self.beta2**t)
+                        v_w_hat = self.v_w / (np.int32(1) - self.beta2**t)
 
                         # Weight calculation
                         self.weights -= self.current_lr * m_w_hat / (np.sqrt(v_w_hat) + self.epsilon)
@@ -631,16 +640,16 @@ class IntenseRegressor:
                         # Intercept condition
                         if self.intercept:
                             # First moment update for bias
-                            self.m_b = self.beta1 * self.m_b + (1 - self.beta1) * grad_b
+                            self.m_b = self.beta1 * self.m_b + (np.int32(1) - self.beta1) * grad_b
 
                             # Second moment update for bias
-                            self.v_b = self.beta2 * self.v_b + (1 - self.beta2) * (grad_b**2)
+                            self.v_b = self.beta2 * self.v_b + (np.int32(1) - self.beta2) * (grad_b**np.int32(2))
 
                             # Bias-corrected first moment for bias
-                            m_b_hat = self.m_b / (1 - self.beta1**t)
+                            m_b_hat = self.m_b / (np.int32(1) - self.beta1**t)
 
                             # Bias-corrected second moment for bias
-                            v_b_hat = self.v_b / (1 - self.beta2**t)
+                            v_b_hat = self.v_b / (np.int32(1) - self.beta2**t)
 
                             # Bias calculation
                             self.b -= self.current_lr * m_b_hat / (np.sqrt(v_b_hat) + self.epsilon)
@@ -703,12 +712,13 @@ class IntenseRegressor:
             **ValueError**: *If model weights are not defined (model not trained).*
         """
         # Check if data is 1D and reshape to 2D if is it
+        X_test = np.asarray(X_test)
         if X_test.ndim == 1:
-            X_processed = X_test.reshape(-1, 1)
+            X_processed = X_test.reshape(-1, 1).astype(np.float32)
         
         # Or let it as is
         else:
-            X_processed = X_test
+            X_processed = X_test.astype(np.float32)
         
         # Raise an error if weight is None
         if self.weights is None:
@@ -778,7 +788,9 @@ class IntenseRegressor:
             "factor": self.factor,
             "delta": self.delta,
             "stoic_iter": self.stoic_iter,
-            "epsilon": self.epsilon
+            "epsilon": self.epsilon,
+            "adalr_window": self.window,
+            "start_w_scale": self.w_input
         }
 
     def set_params(self, **params) -> 'IntenseRegressor':

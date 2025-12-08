@@ -1,4 +1,5 @@
 """*ForLinear* module provides common calculation in machine learning.
+  
   ## Provides:
     - **losses**: *Focused on losses computations.*
     - **probas**: *Focused on probability computations.*
