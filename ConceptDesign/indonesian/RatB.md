@@ -5,9 +5,7 @@ Beberapa unsur utama pada machine learning seperti fungsi kesalahan (loss funsti
 Besarnya 'langkah' ini bisa dilihat berdasarkan besarnya *learning rate* yang ditentukan, learning rate pada machine learning berperan penting dalam meminimalkan kesalahan model,
 learning rate pada model machine learning khususnya model gradien linear bekerja dengan mengkalikan hasil gradien fungsi kesalahan sebelum memengaruhi parameter seperti weight atau coefficient yang secara umum dapat dinotasikan sebagai:
 
-\[
-\text{weight}_t = \text{weight}_{t-1} - \text{learning\_rate} \cdot \nabla_w \text{loss}
-\]
+\text{weight}_t = \text{weight}_{t-1} - \text{learning_rate} \cdot \nabla_w \text{loss}
 
 contoh diatas merupakan notasi paling umum pada machine learning saat model sedang dalam proses training.
 Learning rate sendiri sifatnya berbeda-beda tergantung pada 'penjadwal' yang digunakan, umumnya penjadwal learning rate punya sifat seperti:
@@ -35,36 +33,31 @@ AdaLR sebagai konsep penjadwal memiliki keuntungan yang mencolok, yaitu kemampua
 
 RatBLR bekerja dengan menggantungkan besaran learning rate menggunakan rasio kesalahan pada proses training model, RatBLR dapat dinotasikan secara garis besar sebagai:
 
-\[
-\text{lr\_rate}_t = \text{lr\_rate}_{t-1} \cdot \left( \frac{\text{loss}_{t-1}}{\text{loss}_{t-2}} \right)
-\]
+\text{lr_rate}_t = \text{lr_rate}_{t-1} \cdot \left( \frac{\text{loss}_{t-1}}{\text{loss}_{t-2}} \right)
 
-Learning rate baru berasal dari learning rate indeks sebelumnya yang dikalikan dengan rasio kesalahan pada pembagian \(\text{loss}_{t-1}\) dan \(\text{loss}_{t-2}\), dengan pembagian yang seperti itu dapat menghasilkan sifat matematis yang jikalau \(\text{loss}_{t-1} > \text{loss}_{t-2}\) maka
-learning rate yang dikali rasio akan bertambah sesuai dengan yang dihasilkan dari pembagian kesalahan, dan sebaliknya jika \(\text{loss}_{t-1} < \text{loss}_{t-2}\), maka perkalian dengan rasio kesalahan akan membuat learning rate menjadi lebih kecil.
+Learning rate baru berasal dari learning rate indeks sebelumnya yang dikalikan dengan rasio kesalahan pada pembagian \text{loss}_{t-1} dan \text{loss}_{t-2}, dengan pembagian yang seperti itu dapat menghasilkan sifat matematis yang jikalau \text{loss}_{t-1} > \text{loss}_{t-2} maka
+learning rate yang dikali rasio akan bertambah sesuai dengan yang dihasilkan dari pembagian kesalahan, dan sebaliknya jika \text{loss}_{t-1} < \text{loss}_{t-2}, maka perkalian dengan rasio kesalahan akan membuat learning rate menjadi lebih kecil.
 Dengan definisi yang demikian mampu membuat RatBLR cukup efektif dalam menangani dataset dengan noise yang tinggi dan berpotensi menjadi penjadwal learning rate yang terbukti efektif dalam beberapa kasus.
 
 Dari penjelasan diatas implementasi RatBLR bisa diperluas lagi dengan menambahkan 'window' pada loss guna mendapatkan rasio yang lebih 'luas' dan merata,
 perluasan implementasi tersebut dapat dinotasikan sebagai berikut (menggunakan dasar sintaks bahasa pemrograman Python):
 
-\[
-\text{lr\_rate}_t = \text{lr\_rate}_{t-1} \cdot \frac{\text{mean}(\text{loss}[-window:])}{\text{mean}(\text{loss}[-2window:-window])}
-\]
+\text{lr_rate}_t = \text{lr_rate}_{t-1} \cdot \frac{\text{mean}(\text{loss}[-window:])}{\text{mean}(\text{loss}[-2window:-window])}
 
 Dengan implementasi yang demikian membuat RatBLR dapat lebih 'mengevaluasi' langkah dalam menambah dan mengurangi learning rate.
 Namun bentuk tersebut masih kurang efisien dikarenakan jika rasio loss hanya berada di sekitar 1 maka kenaikan dan penurunan learning rate akan sangat kecil dan memperlambat proses training, 
 mengatasi masalah tersebut bentuk rumus terakhir dapat dikuatkan kembali dengan merubah bentuknya menjadi:
 
-\[
 \text{lr} =
 \begin{cases}
 \text{lr} \cdot (i \cdot t^{p}), & \text{jika } r \leq 1 \\
 \text{lr} \cdot r, & \text{jika } r > 1
 \end{cases}
-\]
+
 dengan
-\[
+
 r = \sqrt{ \frac{\text{mean}(\text{loss}[-window:])}{\text{mean}(\text{loss}[-2window:-window])} }
-\]
+
 
 Bentuk seperti ini akan membuat rasio menjadi lebih terjaga dari overflow dan menjaga learning rate agar tetap memberikan efek yang kontributif.
 Rasio dibawah 1 akan membuat learning rate diturunkan menggunakan formula invscaling guna menciptakan penurunan learning rate yang mulus dan teratur.
@@ -84,9 +77,7 @@ NN terkenal dengan karakteristik kesalahannya (loss) yang sangat tidak stabil da
 Karena demikian penjadwal learning rate RatBLR secara teoritis tidak stabil jika diimplementasikan dalam sistem NN, non-linearitas kesalahan (loss) pada NN dapat mengacau rasio loss yang menyebabkan RatBLR mengatur besaran learning rate secara tidak stabil.
 Mengatasi hal ini formula RatBLR sedikit berubah demi menyesuaikan karakteristik NN, perubahan yang paling mendasar adalah skala rasio yang sekarang diatasi bukan dengan akar kuadrat namun logaritma yang dapat dinotasikan sebagai:
 
-\[
-r = \log{ \frac{\left(\text{mean}(\text{loss}[-window:])\right)}{\text{mean}(\text{loss}[-2window:-window])} }
-\]
+r = \log({ \frac{\left(\text{mean}(\text{loss}[-window:])\right)}{\text{mean}(\text{loss}[-2window:-window])} })
 
 Dengan formula yang demikian rasio akan menjadi lebih stabil dan terorganisir dengan baik yang berpotensi mengurangi sensitivitas algoritma.
 
@@ -95,19 +86,18 @@ sistem patience bekerja dengan menahan perilaku algoritma dalam mengatur besaran
 Dengan tambahan mekanisme patience, notasi algoritma dapat didefinisikan sebagai:
 
 
-\[
 \text{lr} =
 \begin{cases}
 \text{lr} \cdot (i \cdot t^{p}), & \text{jika } r \leq 1 \text{ dan } \text{wait} \geq \text{patience} \\
 \text{lr} \cdot r, & \text{jika } r > 1 \text{ dan } \text{wait} \geq \text{patience}
 \end{cases}
-\]
-dengan
-\[
-r = \log{\frac{\left(\text{mean}(\text{loss}[-window:])\right)}{\text{mean}(\text{loss}[-2window:-window])} }
-\]
 
-\(\text{wait}\) berfungsi sebagai 'hitungan kesabaran' algoritma saat rasio sudah   mencapai ambang batasnya.
+dengan
+
+r = \log({ \frac{\left(\text{mean}(\text{loss}[-window:])\right)}{\text{mean}(\text{loss}[-2window:-window])} })
+
+
+\text{wait} berfungsi sebagai 'hitungan kesabaran' algoritma saat rasio sudah   mencapai ambang batasnya.
 Dengan tambahan mekanisme dan stabilitas berupa logaritma secara teoritis algoritma barusan mampu digunakan dan optimal dalam pengembangan NN kecil, sedang bahkan besar.
 Definisi terakhir dari algoritma dapat disebut sebagai **RobustRat** atau Robust Ratio (Rasio yang kokoh) yang menggambarkan karakteristik dari algoritma.
 
