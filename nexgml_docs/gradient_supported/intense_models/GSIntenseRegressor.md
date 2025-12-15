@@ -94,7 +94,7 @@ MAE uses the **sign** function; RMSE normalises by the current RMSE value; Smoot
 | `stoic_iter` | `int` | `10` | Warm-up epochs before early stop/scheduler |
 | `epsilon` | `float` | `1e-15` | Small value for numerical stability |
 | `adalr_window` | `int` | `5` | Loss window for adaptive learning rate |
-| `start_w_scale` | `float` | `0.01` | Weight initialization scale |
+| `w_init_scale` | `float` | `0.01` | Weight initialization scale |
 
 ## Model Attributes (post-fit)
 

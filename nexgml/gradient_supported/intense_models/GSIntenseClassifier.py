@@ -122,7 +122,7 @@ class IntenseClassifier:
         stoic_iter: int | None = 10,
         epsilon: float=1e-15,
         adalr_window: int=5,
-        start_w_scale: float=0.01
+        w_init_scale: float=0.01
             ):
         """
         Initialize the SoftIntenseClassifier model.
@@ -191,7 +191,7 @@ class IntenseClassifier:
             **adalr_window**: *int, default=5*
             Loss window for 'adaptive' learning rate (AdaLR) scheduler.
 
-            **start_w_scale**: *float, default=0.01*
+            **w_init_scale**: *float, default=0.01*
             Weight initialization scale.
 
         ## Returns:
@@ -243,7 +243,7 @@ class IntenseClassifier:
         self.verbosity = str(verbosity)            # Verbosity level for logging
         self.epsilon = np.float32(epsilon)         # Small constant to prevent division by zero in computations
         self.window = int(adalr_window)            # AdaLR loss window
-        self.w_input = np.float32(start_w_scale)   # Weight initialize scale
+        self.w_input = np.float32(w_init_scale)    # Weight initialize scale
 
         # ========== INTERNAL VARIABLES ==========
         self.weights = None                        # Model weights (coefficients) matrix of shape (n_features, n_classes)
@@ -371,6 +371,9 @@ class IntenseClassifier:
             if X_test.ndim == 1:
                 X_processed = X_test.reshape(-1, 1)
                 # Reshape 1D to 2D
+
+            else:
+                X_processed = X_test
         else:
             X_processed = X_test
 
@@ -513,7 +516,7 @@ class IntenseClassifier:
                 
                 elif self.lr_scheduler == 'adaptive':
                     # Adaptive learning rate based on loss ratio
-                    ratio = np.sqrt(np.mean(self.loss_history[-self.window:], dtype=np.float32) / np.mean(self.loss_history[-2 * self.window:-self.window], dtype=np.float32))
+                    ratio = np.sqrt(abs(np.mean(self.loss_history[-self.window:], dtype=np.float32) / np.mean(self.loss_history[-2 * self.window:-self.window], dtype=np.float32)))
                     if ratio <= 1:
                         self.current_lr = np.clip(self.current_lr / (i + 1)**self.power_t, self.epsilon, 10.0, dtype=np.float32)
 

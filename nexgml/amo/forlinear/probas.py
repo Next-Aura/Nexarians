@@ -1,5 +1,5 @@
 import numpy as np                       # Numpy for numerical computations
-from nexgml.guardians import safe_array  # For numerical stability
+from nexgml.guardians import safe_array, issafe_array  # For numerical stability
 
 def softmax(z: np.ndarray, dtype: np.float32=np.float32) -> np.ndarray:
     """
@@ -16,7 +16,7 @@ def softmax(z: np.ndarray, dtype: np.float32=np.float32) -> np.ndarray:
         **np.ndarray**: *Probability of the given logits.*
 
     ## Raises:
-        **None**
+      **ValueError**: *If array data argument has size 0, NaN, or infinity value.*
 
     ## Notes:
       Calculation is helped by numpy for reaching C-like speed.
@@ -30,6 +30,11 @@ def softmax(z: np.ndarray, dtype: np.float32=np.float32) -> np.ndarray:
     >>> # print: 'Proba:  [0.23503441 0.23503441 0.31726326 0.21266793]'
     ```
     """
+    # Check array safety
+    if not issafe_array(z):
+       raise ValueError("Array data argument is not safe for numerical operation."
+                        "Please check the size or the value if there's NaN or infinity.")
+
     z = np.asarray(z, dtype=dtype)
     if z.ndim == 1:
         z = z.reshape(1, -1)
@@ -61,7 +66,7 @@ def sigmoid(z: np.ndarray, dtype: np.float32=np.float32) -> np.ndarray:
         **np.ndarray**: *Probability of the given logits.*
 
     ## Raises:
-        **None**
+      **ValueError**: *If array data argument has size 0, NaN, or infinity value.*
 
     ## Notes:
       Calculation is helped by numpy for reaching C-like speed.
@@ -75,6 +80,11 @@ def sigmoid(z: np.ndarray, dtype: np.float32=np.float32) -> np.ndarray:
     >>> # print: 'Proba:  [0.6737071  0.56905583]'
     ```
     """
+    # Check array safety
+    if not issafe_array(z):
+       raise ValueError("Array data argument is not safe for numerical operation."
+                        "Please check the size or the value if there's NaN or infinity.")
+
     try:
         from scipy.special import expit
         return dtype(expit(z))

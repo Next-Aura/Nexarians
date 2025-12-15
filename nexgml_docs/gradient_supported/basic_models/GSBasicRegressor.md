@@ -67,7 +67,7 @@ MAE uses the **sign** function; RMSE normalises by the current RMSE value.
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `max_iter` | `int` | `1000` | Max gradient-descent steps |
-| `learning_rate` | `float` | `0.01` | Step size |
+| `learning_rate` | `float` | `0.05` | Step size |
 | `penalty` | `Literal['l1','l2','elasticnet'] \| None` | `'l2'` | Regularization type |
 | `alpha` | `float` | `0.0001` | Regularization strength |
 | `l1_ratio` | `float` | `0.5` | ElasticNet mix (0 = L2, 1 = L1) |
@@ -86,7 +86,7 @@ MAE uses the **sign** function; RMSE normalises by the current RMSE value.
 | `stoic_iter` | `int` | `10` | Warm-up epochs before early stop/scheduler |
 | `epsilon` | `float` | `1e-15` | Small value for numerical stability |
 | `adalr_window` | `int` | `5` | Loss window for adaptive learning rate |
-| `start_w_scale` | `float` | `0.01` | Weight initialization scale |
+| `w_init_scale` | `float` | `0.01` | Weight initialization scale |
 
 ## Model Attributes (post-fit)
 

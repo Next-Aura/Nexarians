@@ -117,7 +117,7 @@ class IntenseRegressor:
         stoic_iter: int | None = 10,
         epsilon: float=1e-15,
         adalr_window: int=5,
-        start_w_scale: float=0.01
+        w_init_scale: float=0.01
         ):
         """
         Initialize the IntenseRegressor model.
@@ -190,7 +190,7 @@ class IntenseRegressor:
             **adalr_window**: *int, default=5*
             Loss window for 'adaptive' learning rate (AdaLR) scheduler.
             
-            **start_w_scale**: *float, default=0.01*
+            **w_init_scale**: *float, default=0.01*
             Weight initialization scale.
 
         ## Returns:
@@ -239,7 +239,7 @@ class IntenseRegressor:
         self.verbose = int(verbose)                             # Model progress logging
         self.verbosity = str(verbosity)                         # Verbosity level for logging
         self.window = int(adalr_window)                         # AdaLR loss window
-        self.w_input = np.float32(start_w_scale)                # Weight initialize scale
+        self.w_input = np.float32(w_init_scale)                 # Weight initialize scale
 
         self.lr_scheduler = str(lr_scheduler)                   # Learning rate scheduler method
         self.optimizer = str(optimizer)                         # Optimizer type
@@ -499,7 +499,7 @@ class IntenseRegressor:
                 
                 elif self.lr_scheduler == 'adaptive':
                     # Adaptive learning rate based on loss ratio
-                    ratio = np.sqrt(np.mean(self.loss_history[-self.window:], dtype=np.float32) / np.mean(self.loss_history[-2 * self.window:-self.window], dtype=np.float32))
+                    ratio = np.sqrt(abs(np.mean(self.loss_history[-self.window:], dtype=np.float32) / np.mean(self.loss_history[-2 * self.window:-self.window], dtype=np.float32)))
                     if ratio <= 1:
                         self.current_lr = np.clip(self.current_lr / (i + np.int32(1))**self.power_t, self.epsilon, 10.0, dtype=np.float32)
 

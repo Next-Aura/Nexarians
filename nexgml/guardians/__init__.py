@@ -10,7 +10,7 @@
   ## Note:
     **All the helpers implemented in python programming language.**"""
 
-from .arr import (safe_array)
+from .arr import (safe_array, issafe_array)
 from .detect import (hasinf, hasnan, iscontinious, isdiscrete)
 
 __all__ = [
@@ -18,5 +18,6 @@ __all__ = [
     'hasinf',
     'hasnan',
     'iscontinious',
-    'isdiscrete'
+    'isdiscrete',
+    'issafe_array'
 ]

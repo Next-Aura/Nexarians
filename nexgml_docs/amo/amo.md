@@ -40,6 +40,8 @@ Calculates the numerically stable softmax probability for a given set of logits.
       * `dtype` (`DTypeLike`): Data type output.
   * **Returns**:
       * (`np.ndarray`): Probability scores (summing to 1 across the class axis).
+  * **Raises**:
+      * `ValueError`: If array data argument has size 0, NaN, or infinity value.
 
 ### `sigmoid(z, dtype=np.float32)`
 
@@ -50,6 +52,8 @@ Calculates the sigmoid (logistic) probability. It attempts to use `scipy.special
       * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`np.ndarray`): Probabilities between 0 and 1.
+  * **Raises**:
+      * `ValueError`: If array data argument has size 0, NaN, or infinity value.
 
 ### `categorical_ce(y_true, y_pred_proba, mean=True, weighting=True, dtype=np.float32, epsilon=1e-8)`
 
@@ -66,6 +70,8 @@ Calculates the categorical cross-entropy loss.
       * `epsilon` (`float`, default=`1e-8`): Small value to prevent zero division error.
   * **Returns**:
       * (`np.ndarray` or `float`): The calculated loss.
+  * **Raises**:
+      * `ValueError`: If y_true or y_pred_proba data has size 0, NaN, or infinity value.
 
 ### `binary_ce(y_true, y_pred_proba, mean=True, dtype=np.float32, epsilon=1e-8)`
 
@@ -79,6 +85,8 @@ Calculates the binary cross-entropy loss for binary classification.
       * `epsilon` (`float`, default=`1e-8`): Small value to prevent zero division error.
   * **Returns**:
       * (`np.ndarray` or `float`): The calculated loss.
+  * **Raises**:
+      * `ValueError`: If y_true or y_pred_proba data has size 0, NaN, or infinity value.
 
 ### `mean_squared_error(y_true, y_pred, dtype=np.float32)`
 
@@ -90,6 +98,8 @@ Calculates the Mean Squared Error (MSE) regression loss.
       * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`float`): The MSE loss.
+  * **Raises**:
+      * `ValueError`: If y_true or y_pred data has size 0, NaN, or infinity value.
 
 ### `mean_absolute_error(y_true, y_pred, dtype=np.float32)`
 
@@ -101,6 +111,8 @@ Calculates the Mean Absolute Error (MAE) regression loss.
       * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`float`): The MAE loss.
+  * **Raises**:
+      * `ValueError`: If y_true or y_pred data has size 0, NaN, or infinity value.
 
 ### `root_squared_error(y_true, y_pred, dtype=np.float32)`
 
@@ -112,6 +124,8 @@ Calculates the Root Mean Squared Error (RMSE) regression loss.
       * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`float`): The RMSE loss.
+  * **Raises**:
+      * `ValueError`: If y_true or y_pred data has size 0, NaN, or infinity value.
 
 ### `smoothl1_loss(y_true, y_pred, delta, dtype=np.float32)`
 
@@ -124,6 +138,8 @@ Calculates the Smooth L1 (Huber) Loss, which is less sensitive to outliers than 
       * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`float`): The Smooth L1 loss.
+  * **Raises**:
+      * `ValueError`: If y_true or y_pred_proba data has size 0, NaN, or infinity value.
 
 ### `lasso(a, alpha, dtype=np.float32)`
 
@@ -135,6 +151,8 @@ Calculates the lasso (L1) penalty.
       * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`float`): The calculated penalty.
+  * **Raises**:
+      * `ValueError`: If array data argument has size 0, NaN, or infinity value.
 
 ### `ridge(a, alpha, dtype=np.float32)`
 
@@ -146,6 +164,8 @@ Calculates the ridge (L2) penalty.
       * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`float`): The calculated penalty.
+  * **Raises**:
+      * `ValueError`: If array data argument has size 0, NaN, or infinity value.
 
 ### `elasticnet(a, alpha, l1_ratio=0.5, dtype=np.float32)`
 
@@ -158,6 +178,8 @@ Calculates the elastic net penalty.
       * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`float`): The calculated penalty.
+  * **Raises**:
+      * `ValueError`: If array data argument has size 0, NaN, or infinity value.
 
 ### `mse_deriv(X, residual, intercept, dtype=np.float32)`
 
@@ -170,6 +192,8 @@ Calculates the Mean Squared Error (MSE) loss function derivative.
       * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`tuple[np.ndarray, float]`): gradient w.r.t weight, gradient w.r.t bias.
+ * **Raises**:
+      * `ValueError`: If X or residual data has size 0, NaN, or infinity value.
 
 ### `rmse_deriv(X, residual, intercept, dtype=np.float32)`
 
@@ -182,6 +206,8 @@ Calculates the Root Mean Squared Error (RMSE) loss function derivative.
       * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`tuple[np.ndarray, float]`): gradient w.r.t weight, gradient w.r.t bias.
+  * **Raises**:
+      * `ValueError`: If X or residual data has size 0, NaN, or infinity value.
 
 ### `mae_deriv(X, residual, intercept, dtype=np.float32)`
 
@@ -194,6 +220,8 @@ Calculates the Mean Absolute Error (MAE) loss function derivative.
       * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`tuple[np.ndarray, float]`): gradient w.r.t weight, gradient w.r.t bias.
+  * **Raises**:
+      * `ValueError`: If X or residual data has size 0, NaN, or infinity value.
 
 ### `smoothl1_deriv(X, residual, intercept, delta=0.5, dtype=np.float32)`
 
@@ -207,6 +235,8 @@ Calculates the Smooth L1 (Huber) loss function derivative.
       * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`tuple[np.ndarray, float]`): gradient w.r.t weight, gradient w.r.t bias.
+  * **Raises**:
+      * `ValueError`: If X or residual data has size 0, NaN, or infinity value.
 
 ### `cce_deriv(X, residual, intercept, classes, dtype=np.float32)`
 
@@ -220,6 +250,8 @@ Calculates the Categorical Cross-entropy (CCE) loss function derivative.
       * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`tuple[np.ndarray, float]`): gradient w.r.t weight, gradient w.r.t bias.
+  * **Raises**:
+      * `ValueError`: If X or residual data has size 0, NaN, or infinity value.
 
 ### `lasso_deriv(a, alpha, dtype=np.float32)`
 
@@ -231,6 +263,8 @@ Calculates the lasso (L1) penalty derivative.
       * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`np.ndarray`): The calculated penalty derivative.
+  * **Raises**:
+      * `ValueError`: If array data argument has size 0, NaN, or infinity value.
 
 ### `ridge_deriv(a, alpha, dtype=np.float32)`
 
@@ -242,6 +276,8 @@ Calculates the ridge (L2) penalty derivative.
       * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`np.ndarray`): The calculated penalty derivative.
+  * **Raises**:
+      * `ValueError`: If array data argument has size 0, NaN, or infinity value.
 
 ### `elasticnet_deriv(a, alpha, l1_ratio, dtype=np.float32)`
 
@@ -254,6 +290,8 @@ Calculates the elastic net penalty derivative.
       * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`np.ndarray`): The calculated penalty derivative.
+  * **Raises**:
+      * `ValueError`: If array data argument has size 0, NaN, or infinity value.
 
 ## `ForTree` API Reference
 

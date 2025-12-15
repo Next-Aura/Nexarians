@@ -28,7 +28,7 @@ This module provides static methods for robust and safe numerical array operatio
 
 -----
 
-### `safe_array(arr, min_value=-1e10, max_value=1e10, warn_me=True, dtype=np.float32)`
+### `safe_array(arr, min_value=-1e10, max_value=1e10, warn_me=True, clip=True, dtype=np.float32)`
 
 Safely convert array to finite numbers within specified bounds.
 
@@ -37,11 +37,21 @@ Safely convert array to finite numbers within specified bounds.
       * `min_value` (`float`, default=`-1e10`): Minimum allowable value in the array.
       * `max_value` (`float`, default=`1e10`): Maximum allowable value in the array.
       * `warn_me` (`bool`, default=`True`): If True, the function would throw a warning if there's a NaN or infinity value detected.
+      * `clip` (`bool`, default=`True`): If True, the function would clip array value if it greater than max_value or less than min_value.
       * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`np.ndarray`): Processed array with values clipped to the specified bounds.
   * **Raises**:
       * `RuntimeWarning`: Warns if any values were clipped due to overflow.
+
+### `issafe_array(arr)`
+
+Check if an array is safe for numerical operations.
+
+  * **Parameters**:
+      * `arr` (`np.ndarray`): Input array to be processed.
+  * **Returns**:
+      * (`bool`): Array's safety condition.
 
 ### `hasinf(arr)`
 

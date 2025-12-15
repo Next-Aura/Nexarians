@@ -71,7 +71,7 @@ class BasicRegressor:
     def __init__(
             self, 
             max_iter: int=1000, 
-            learning_rate: float=0.01, 
+            learning_rate: float=0.05, 
             penalty: Optional[Literal["l1", "l2", "elasticnet"]] | None="l2", 
             alpha: float=0.0001, 
             l1_ratio: float=0.5, 
@@ -90,7 +90,7 @@ class BasicRegressor:
             stoic_iter: int | None = 10,
             epsilon: float=1e-15,
             adalr_window: int=5,
-            start_w_scale: float=0.01
+            w_init_scale: float=0.01
             ):
         """
         Initialize the BasicRegressor model.
@@ -156,7 +156,7 @@ class BasicRegressor:
             **adalr_window**: *int, default=5*
             Loss window for 'adaptive' learning rate (AdaLR) scheduler.
 
-            **start_w_scale**: *float, default=0.01*
+            **w_init_scale**: *float, default=0.01*
             Weight initialization scale.
 
         ## Returns:
@@ -202,7 +202,7 @@ class BasicRegressor:
         self.factor = np.float32(factor)           # Factor by which to reduce learning rate on plateau
         self.stoic_iter = int(stoic_iter)          # Warm-up iterations before applying early stopping and lr scheduler
         self.window = int(adalr_window)            # AdaLR loss window
-        self.w_input = np.float32(start_w_scale)   # Weight initialize scale
+        self.w_input = np.float32(w_init_scale)   # Weight initialize scale
 
         self.l1_ratio = np.float32(l1_ratio)       # Elastic net mixing ratio
         self.alpha = np.float32(alpha)             # Alpha for regularization power
@@ -412,7 +412,7 @@ class BasicRegressor:
 
                 elif self.lr_scheduler == 'adaptive':
                     # Adaptive learning rate based on loss ratio
-                    ratio = np.sqrt(np.mean(self.loss_history[-self.window:], dtype=np.float32) / np.mean(self.loss_history[-2 * self.window:-self.window], dtype=np.float32))
+                    ratio = np.sqrt(abs(np.mean(self.loss_history[-self.window:], dtype=np.float32) / np.mean(self.loss_history[-2 * self.window:-self.window], dtype=np.float32)))
                     if ratio <= 1:
                         self.current_lr = np.clip(self.current_lr / (i + 1)**self.power_t, self.epsilon, 10.0, dtype=np.float32)
 
