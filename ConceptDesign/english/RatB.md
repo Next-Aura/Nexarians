@@ -5,7 +5,7 @@ Some key elements in machine learning include the loss function, its derivatives
 The size of this "step" can be determined by the specified learning rate. The learning rate in machine learning plays a crucial role in minimizing model loss.
 The learning rate in machine learning models, particularly linear gradient models, works by multiplying the gradient of the loss function before influencing parameters such as weights or coefficients. This can generally be denoted as:
 
-$$\text{weight}_t = \text{weight}_{t-1} - \text{learning_rate} \cdot \nabla_w \text{loss}$$
+$\text{weight}_t = \text{weight}_{t-1} - \text{learning_rate} \cdot \nabla_w \text{loss}$
 
 The example above represents the most common notation in machine learning when a model is in the training process.
 
@@ -33,16 +33,16 @@ AdaLR, as a scheduling concept, has a striking advantage: its ability to adjust 
 
 RatBLR works by relying on the learning rate using the loss ratio in the model training process. RatBLR can be roughly denoted as:
 
-$$\text{lr_rate}_t = \text{lr_rate}_{t-1} \cdot \left( \frac{\text{loss}_{t-1}}{\text{loss}_{t-2}} \right)$$
+$\text{lr_rate}_t = \text{lr_rate}_{t-1} \cdot \left( \frac{\text{loss}_{t-1}}{\text{loss}_{t-2}} \right)$
 
-The new learning rate is derived from the previous index learning rate multiplied by the loss ratio by dividing $$\text{loss}_{t-1}$$ by $$\text{loss}_{t-2}$$. This division produces a mathematical property: if $$\text{loss}_{t-1} > \text{loss}_{t-2}$$, then
-the learning rate multiplied by the ratio will increase according to the result of the loss division. Conversely, if $$\text{loss}_{t-1} < \text{loss}_{t-2}$$, then multiplying by the loss ratio will reduce the learning rate.
+The new learning rate is derived from the previous index learning rate multiplied by the loss ratio by dividing $\text{loss}_{t-1}$ by $\text{loss}_{t-2}$. This division produces a mathematical property: if $\text{loss}_{t-1} > \text{loss}_{t-2}$, then
+the learning rate multiplied by the ratio will increase according to the result of the loss division. Conversely, if $\text{loss}_{t-1} < \text{loss}_{t-2}$, then multiplying by the loss ratio will reduce the learning rate.
 This definition makes RatBLR quite effective in handling datasets with high noise and has the potential to be an effective learning rate scheduler in some cases.
 
 From the explanation above, the RatBLR implementation can be further expanded by adding a 'window' to the loss to obtain a wider and more even ratio.
 This extended implementation can be denoted as follows (using basic Python programming language syntax):
 
-$$\text{lr_rate}_t = \text{lr_rate}_{t-1} \cdot \frac{\text{mean}(\text{loss}[-window:])}{\text{mean}(\text{loss}[-2window:-window])}$$
+$\text{lr_rate}_t = \text{lr_rate}_{t-1} \cdot \frac{\text{mean}(\text{loss}[-window:])}{\text{mean}(\text{loss}[-2window:-window])}$
 
 This implementation allows RatBLR to better evaluate the steps involved in increasing and decreasing the learning rate.
 However, this formula is still inefficient because if the loss ratio is only around 1, the increase and decrease in the learning rate will be very small and slow down the training process.
@@ -105,7 +105,7 @@ $$
 r = \log({ \frac{\left(\text{mean}(\text{loss}[-window:])\right)}{\text{mean}(\text{loss}[-2window:-window])} })
 $$
 
-$$\text{wait}$$ It functions as a "patience count" for the algorithm when the ratio reaches its threshold.
+$\text{wait}$ It functions as a "patience count" for the algorithm when the ratio reaches its threshold.
 With the addition of a logarithmic mechanism and stability, the above algorithm can theoretically be used and optimized for developing small, medium, and even large neural networks (NNs).
 The final definition of the algorithm can be called RobustRat, or Robust Ratio, which describes the algorithm's characteristics.
 
