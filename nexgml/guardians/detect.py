@@ -63,7 +63,7 @@ def hasnan(arr: np.ndarray | list | sparse.spmatrix) -> bool:
 
     return stat
 
-def iscontinious(a: np.ndarray | list | sparse.spmatrix) -> bool:
+def iscontinuous(a: np.ndarray | list | sparse.spmatrix) -> bool:
     """Check if the array values are continuous.
 
     ## Args:
@@ -117,4 +117,4 @@ def isdiscrete(a: np.ndarray | list | sparse.spmatrix) -> bool:
     ```
     """
     a = np.asarray(a)
-    return not iscontinious(a)
+    return not iscontinuous(a)

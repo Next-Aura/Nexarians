@@ -1,5 +1,5 @@
 import numpy as np
-from nexgml.guardians import iscontinious
+from nexgml.guardians import iscontinuous
 
 def r2_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     """
@@ -29,13 +29,13 @@ def r2_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     >>> print("Model's R² score:", r2)
     ```
     """
-    if not iscontinious(y_true):
+    if not iscontinuous(y_true):
         raise ValueError("R^2 score only calculate continious label loss.")
     
     ss_res = np.sum((y_true - y_pred) ** 2)
     ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
     
     if ss_tot == 0:
-        return 0.0
+        return 1.0 if ss_res == 0 else 0.0
     
     return 1 - (ss_res / ss_tot)
