@@ -1,41 +1,24 @@
 # RatB - Ratio Based
 
-Machine learning (ML) adalah momen ketika suatu program mampu menghasilkan hal yang sebelumnya tidak ia 'lihat' dari proses training.
-Beberapa unsur utama pada machine learning seperti fungsi kesalahan (loss funstion), derivatif-nya, dan juga besar 'langkah' yang diambil dalam meminimalkan kesalahan (loss).
-Besarnya 'langkah' ini bisa dilihat berdasarkan besarnya *learning rate* yang ditentukan, learning rate pada machine learning berperan penting dalam meminimalkan kesalahan model,
-learning rate pada model machine learning khususnya model gradien linear bekerja dengan mengkalikan hasil gradien fungsi kesalahan sebelum memengaruhi parameter seperti weight atau coefficient yang secara umum dapat dinotasikan sebagai:
+## Definisi
 
-$\text{weight}_t = \text{weight}_{t-1} - \text{learning_rate} \cdot \nabla_w \text{loss}$
-
-contoh diatas merupakan notasi paling umum pada machine learning saat model sedang dalam proses training.
-Learning rate sendiri sifatnya berbeda-beda tergantung pada 'penjadwal' yang digunakan, umumnya penjadwal learning rate punya sifat seperti:
-
-- Constant
-- Decay
-- Adaptive
-
-### Constant
-Learning rate tidak berubah selama proses training, umumnya penjadwal didefinisikan sebagai 'Constant'.
-
-### Decay
-Learning rate berkurang seiring berjalannya proses pelatihan, 
-contoh penjadwalnya adalah 'Invscaling'.
-
-### Adaptive
-Learning rate berubah mengikuti pergerakan suatu parameter, contoh penjadwalnya adalah "LROnPlateau" yang akan menurunkan learning rate saat progress penurunan kesalahan stagnant.
-
-## Implementasi
 Konsep AdaLR atau 'Adaptive Learning Rate' merupakan bagian dari penjadwal learning rate dengan sifat adaptif.
 AdaLR sebagai konsep penjadwal memiliki keuntungan yang mencolok, yaitu kemampuannya dalam menyesuaikan learning rate berdasarkan suatu patokan yang ditentukan.
 
 **RatBLR** (Ratio Based Learning Rate) hadir sebagai penjadwal learning rate yang berbasis rasio kesalahan (loss). Konsep ini didasari dari ide pokok seorang individu yang menyatakan bahwa penjadwal learning rate sebaiknya memiliki kemampuan untuk beradaptasi secara real-time berdasarkan rasio kesalahan.
+
+## Dukungan teori
+
+Pendapat pribadi dari hasil pengamatan dan obsevasi ku menyatakan semakin besar loss maka semakin kacau model saat proses training, dan learning rate sebagai pengatur langkah 'pergerakan' model dalam menangkap sinyal gradien punya potensi mengembalikan situasi dengan mengatur loss ke arah yang benar, yaitu arah yang mampu menurunkan loss. Dalam observasi ku, loss mengalami kenaikan maka lr yang dibutuhkan harus lebih besar untuk mengambil sinyal gradient lebih banyak yang diharapkan mampu menurukan loss kembali.
+
+## Implementasi
 
 RatBLR bekerja dengan menggantungkan besaran learning rate menggunakan rasio kesalahan pada proses training model, RatBLR dapat dinotasikan secara garis besar sebagai:
 
 $\text{lr_rate}_t = \text{lr_rate}_{t-1} \cdot \left( \frac{\text{loss}_{t-1}}{\text{loss}_{t-2}} \right)$
 
 Learning rate baru berasal dari learning rate indeks sebelumnya yang dikalikan dengan rasio kesalahan pada pembagian $\text{loss}_{t-1}$ dan $\text{loss}_{t-2}$, dengan pembagian yang seperti itu dapat menghasilkan sifat matematis yang jikalau $\text{loss}_{t-1} > \text{loss}_{t-2}$ maka
-learning rate yang dikali rasio akan bertambah sesuai dengan yang dihasilkan dari pembagian kesalahan, dan sebaliknya jika $\text{loss}_{t-1} < \text{loss}_{t-2}$, maka perkalian dengan rasio kesalahan akan membuat learning rate menjadi lebih kecil.
+learning rate yang dikali rasio akan bertambah sesuai dengan yang dihasilkan dari pembagian kesalahan, dan sebaliknya jika $\text{loss}_{t-1} < \text{loss}_{t-2}$, maka perkalian dengan rasio kesalahan akan membuat learning rate menjadi lebih kecil, asumsikan nilai fungsi kesalahan (loss) umum pada machine learning klasik adalah non-negatif.
 Dengan definisi yang demikian mampu membuat RatBLR cukup efektif dalam menangani dataset dengan noise yang tinggi dan berpotensi menjadi penjadwal learning rate yang terbukti efektif dalam beberapa kasus.
 
 Dari penjelasan diatas implementasi RatBLR bisa diperluas lagi dengan menambahkan 'window' pada loss guna mendapatkan rasio yang lebih 'luas' dan merata,
@@ -71,16 +54,16 @@ sehingga dalam praktiknya RatBLR menggunakan pemotongan atau clipping untuk menc
 
 Konsep RatBLR dirancang dan dikhususkan untuk machine learning klasik dimana fluktuasi kesalahan atau loss dapat dijelaskan karna kecendrungan sifat linearnya.
 
-## Implementasi yang lebih dalam
+## Pendalaman implementasi
 
 Pendalaman implementasi berfungsi untuk meluaskan kasus penggunaan (use case) dari konsep AdaLR yang dijelaskan barusan. Pendalaman implementasi yang dimaksud adalah membuat konsep AdaLR yang dijabarkan tadi kompatibel dengan jenis machine learning yang lebih canggih seperti neural network (NN).
 
 NN terkenal dengan karakteristik kesalahannya (loss) yang sangat tidak stabil dan sifat non-linearitasnya menambah kerumitan NN dari segi representasi kesalahan (loss).
 Karena demikian penjadwal learning rate RatBLR secara teoritis tidak stabil jika diimplementasikan dalam sistem NN, non-linearitas kesalahan (loss) pada NN dapat mengacau rasio loss yang menyebabkan RatBLR mengatur besaran learning rate secara tidak stabil.
-Mengatasi hal ini formula RatBLR sedikit berubah demi menyesuaikan karakteristik NN, perubahan yang paling mendasar adalah skala rasio yang sekarang diatasi bukan dengan akar kuadrat namun logaritma yang dapat dinotasikan sebagai:
+Mengatasi hal ini formula RatBLR sedikit berubah demi menyesuaikan karakteristik NN, perubahan yang paling mendasar adalah skala rasio yang sekarang diatasi bukan dengan akar kuadrat namun logaritma dan konversi ke nilai absolut untuk mencegah rasio merubah tanda lr saat dikali karna loss negatif bukanlah hal yang mustahil dan umum pada NN, perubahan yang demikian dapat dinotasikan sebagai:
 
 $$
-r = \log({ \frac{\left(\text{mean}(\text{loss}[-window:])\right)}{\text{mean}(\text{loss}[-2window:-window])} })
+r = \abs( \log({ \frac{\left(\text{mean}(\text{loss}[-window:])\right)}{\text{mean}(\text{loss}[-2window:-window])} }) )
 $$
 
 Dengan formula yang demikian rasio akan menjadi lebih stabil dan terorganisir dengan baik yang berpotensi mengurangi sensitivitas algoritma.
@@ -100,7 +83,7 @@ $$
 dengan
 
 $$
-r = \log({ \frac{\left(\text{mean}(\text{loss}[-window:])\right)}{\text{mean}(\text{loss}[-2window:-window])} })
+r = \abs( \log({ \frac{\left(\text{mean}(\text{loss}[-window:])\right)}{\text{mean}(\text{loss}[-2window:-window])} }) )
 $$
 
 $\text{wait}$ berfungsi sebagai 'hitungan kesabaran' algoritma saat rasio sudah mencapai ambang batasnya.
@@ -108,4 +91,5 @@ Dengan tambahan mekanisme dan stabilitas berupa logaritma secara teoritis algori
 Definisi terakhir dari algoritma dapat disebut sebagai **RobustRat** atau Robust Ratio (Rasio yang kokoh) yang menggambarkan karakteristik dari algoritma.
 
 ## Kesimpulan
+
 Penjadwal learning rate merupakan hal yang krusial dalam machine learning karna berperan langsung dengan bagaimana parameter seperti weight atau coefficient diperbarui. Konsep **Ratio Based (RatB)** yang berisi **Ratio Based Learning Rate (RatBLR)** dan **Robust Ratio (RobustRat)** sebagai bentuk yang lebih stabil untuk neural network (NN) menjadi opsi penjadwal learning rate yang mampu menciptakan efek adaptif namun tetap kontributif saat proses training model.

@@ -1,42 +1,24 @@
 # RatB - Ratio Based
 
-Machine learning (ML) is the moment when a program is able to produce results it didn't previously see during the training process.
-Some key elements in machine learning include the loss function, its derivatives, and the number of steps taken to minimize the loss.
-The size of this "step" can be determined by the specified learning rate. The learning rate in machine learning plays a crucial role in minimizing model loss.
-The learning rate in machine learning models, particularly linear gradient models, works by multiplying the gradient of the loss function before influencing parameters such as weights or coefficients. This can generally be denoted as:
+## Definition
 
-$\text{weight}_t = \text{weight}_{t-1} - \text{learning_rate} \cdot \nabla_w \text{loss}$
-
-The example above represents the most common notation in machine learning when a model is in the training process.
-
-The learning rate itself varies depending on the scheduler used. Generally, learning rate schedulers have the following properties:
-
-- Constant
-- Decay
-- Adaptive
-
-### Constant
-The learning rate does not change during the training process; the scheduler is generally defined as 'Constant'.
-
-### Decay
-The learning rate decreases as the training process progresses.
-An example of this scheduler is 'Invscaling'.
-
-### Adaptive
-The learning rate changes according to the movement of a parameter. An example of this scheduler is 'LROnPlateau', which will decrease the learning rate when the loss reduction progress stagnates.
-
-## Implementation
 The AdaLR or 'Adaptive Learning Rate' concept is a subset of learning rate schedulers with adaptive properties.
 AdaLR, as a scheduling concept, has a striking advantage: its ability to adjust the learning rate based on a specified benchmark.
 
 **RatBLR** (Ratio-Based Learning Rate) is a learning rate scheduler based on the loss ratio. This concept is based on the basic idea of ​​an individual who stated that a learning rate scheduler should have the ability to adapt in real time based on the loss rate.
+
+## Theoretical Support
+
+My personal opinion, based on my observations, is that the greater the loss, the more chaotic the model becomes during training. The learning rate, which regulates the model's "movement" in capturing gradient signals, has the potential to reverse the situation by adjusting the loss in the correct direction, one that reduces it. In my observations, if the loss increases, the required LR must be larger to capture more gradient signals, which is expected to reduce the loss again.
+
+## Implementation
 
 RatBLR works by relying on the learning rate using the loss ratio in the model training process. RatBLR can be roughly denoted as:
 
 $\text{lr_rate}_t = \text{lr_rate}_{t-1} \cdot \left( \frac{\text{loss}_{t-1}}{\text{loss}_{t-2}} \right)$
 
 The new learning rate is derived from the previous index learning rate multiplied by the loss ratio by dividing $\text{loss}_{t-1}$ by $\text{loss}_{t-2}$. This division produces a mathematical property: if $\text{loss}_{t-1} > \text{loss}_{t-2}$, then
-the learning rate multiplied by the ratio will increase according to the result of the loss division. Conversely, if $\text{loss}_{t-1} < \text{loss}_{t-2}$, then multiplying by the loss ratio will reduce the learning rate.
+the learning rate multiplied by the ratio will increase according to the result of the loss division. Conversely, if $\text{loss}_{t-1} < \text{loss}_{t-2}$, then multiplying by the loss ratio will reduce the learning rate, assume the value of the general loss function in classical machine learning is non-negative.
 This definition makes RatBLR quite effective in handling datasets with high noise and has the potential to be an effective learning rate scheduler in some cases.
 
 From the explanation above, the RatBLR implementation can be further expanded by adding a 'window' to the loss to obtain a wider and more even ratio.
@@ -80,10 +62,10 @@ This deeper implementation aims to expand the use cases of the AdaLR concept des
 NNs are known for their highly unstable loss characteristics, and their nonlinearity adds complexity to NNs in terms of loss representation.
 
 Because the RatBLR learning rate scheduler is theoretically unstable when implemented in a NN system, the non-linearity of the loss in the NN can disrupt the loss ratio, causing RatBLR to adjust the learning rate unstably.
-To address this issue, the RatBLR formula has been slightly modified to accommodate the characteristics of NNs. The most fundamental change is that the ratio is now scaled using a logarithm instead of a square root, which can be denoted as:
+To address this issue, the RatBLR formula has been slightly modified to accommodate the characteristics of NNs. The most fundamental change is that the ratio is now scaled using a logarithm instead of a square root and conversion to absolute value to prevent the ratio from changing lr sign when multiplied because negative loss is not impossible and common in NN, which can be denoted as:
 
 $$
-r = \log({ \frac{\left(\text{mean}(\text{loss}[-window:])\right)}{\text{mean}(\text{loss}[-2window:-window])} })
+r = \abs( \log({ \frac{\left(\text{mean}(\text{loss}[-window:])\right)}{\text{mean}(\text{loss}[-2window:-window])} }) )
 $$
 
 This formula allows for a more stable and well-organized ratio, potentially reducing the algorithm's sensitivity.
@@ -102,7 +84,7 @@ $$
 where
 
 $$
-r = \log({ \frac{\left(\text{mean}(\text{loss}[-window:])\right)}{\text{mean}(\text{loss}[-2window:-window])} })
+r = \abs( \log({ \frac{\left(\text{mean}(\text{loss}[-window:])\right)}{\text{mean}(\text{loss}[-2window:-window])} }) )
 $$
 
 $\text{wait}$ It functions as a "patience count" for the algorithm when the ratio reaches its threshold.
