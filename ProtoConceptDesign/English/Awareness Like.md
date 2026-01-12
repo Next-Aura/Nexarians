@@ -36,3 +36,5 @@ Some schedulers also have a "programmed" LR formula during the training process,
 ## Opinion
 
 The LR properties of the scheduler are intended to address specific problems or general defaults, but I feel some popular schedulers are too fixated on LR decrement and the constraints of mathematical formulas. I feel there should be a scheduler that can "understand" the training situation and adapt accordingly.
+
+> CoDe: **RatB or Ratio Based**

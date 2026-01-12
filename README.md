@@ -1,24 +1,20 @@
-# Nexarians - The NexGML Core Repository
+# Nexarians - Open source machine learning repository for community
 
 [![PyPI version](https://badge.fury.io/py/nexgml.svg)](https://pypi.org/project/nexgml/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Next-Aura/Nexarians/blob/main/LICENSE) 
 
-## Installation
-```bash
-pip install nexgml
-```
+## 🔬 NexGML PyPI package: Transparent, Modular, and Easy to use
 
-## 🔬 Core Philosophy: Transparent, Fast, and Modular
-
-NexGML is a custom Machine Learning utility built for educational and research purposes, emphasizing **code transparency** and **high performance**.
+NexGML (Next Generation Machine Learning) is a custom Machine Learning utility package built for educational and research purposes, emphasizing **code transparency** and **high performance** with efficient python implementation.
 
 ### Key Features & Technology Stack
   * **Modular Helpers:** Separates complex logic into focused helper modules (`ForLinear`, `ForTree`, `Indexing`, `Metrics`, `Guardians`) for easy customization.
   * **Sparse Data Ready:** Full support for `scipy.sparse` matrices (CSR/CSC) for memory efficiency.
 
------
-
-## 💻 Available Modules & Quick Start
+### Installation
+```bash
+pip install nexgml
+```
 
 ### 1\. Classifiers (The Models)
 
@@ -73,6 +69,12 @@ These modules contain the high-speed math used internally.
 | `nexgml.indexing` | **Data Utilities.** One-hot encoding, smart feature slicing (`standard_indexing`). | `indexing.standard_indexing(n_features, 'sqrt')` |
 | `nexgml.metrics` | **Model Metrics.** Regressor and classifier models metrics computation (R^2, F1, Accuracy Score) | `accuracy_score(y_true, pred)` |
 | `nexgml.guardians` | **Numerical stability**. Value clipping, invalid value detecting (safe_array, hasinf, hasnan) | `safe_array(array)` |
+
+## ConceptDesign
+ConceptDesign (CoDe) is a folder where the design of a concept that is material for community research is defined and developed via files with markdown (md) existence.
+
+## ProtoConceptDesign
+ProtoConceptDesign (ProCoDe) is a folder that stores the main ideas, basic theorems, main ideas and context definitions of a concept design which are in the 'ConceptDesign' folder. The purpose of separating CoDe and ProCoDe is to provide clarity between concept definitions and context definitions.
 
 ## 📝 Documentation & Exploration
 

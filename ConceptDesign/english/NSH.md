@@ -2,7 +2,7 @@
 
 ## Definition
 
-NSH, or Naive Specialist Hierarchy, is a concept that introduces a machine learning architecture that enables the expansion of cognitive functions.
+NSH, or Naive Specialist Hierarchy, is a concept that introduces a machine learning architecture that enables expansion of it's cognitive functions.
 
 ## Theoretical Support
 

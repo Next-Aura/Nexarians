@@ -9,7 +9,7 @@ AdaLR, as a scheduling concept, has a striking advantage: its ability to adjust 
 
 ## Theoretical Support
 
-My personal opinion, based on my observations, is that the greater the loss, the more chaotic the model becomes during training. The learning rate, which regulates the model's "movement" in capturing gradient signals, has the potential to reverse the situation by adjusting the loss in the correct direction, one that reduces it. In my observations, if the loss increases, the required LR must be larger to capture more gradient signals, which is expected to reduce the loss again.
+My personal opinion from the results of my observations and observations states that the greater the loss, the more chaotic the model will be during the training process, and the learning rate as a regulator of the model's 'movement' steps in capturing gradient signals has the potential to restore the situation by setting the loss in the right direction, namely a direction that can reduce loss. In my observations, when loss experiences a larger increase, lr is consistently able to reduce loss. Mathematically, this can be caused because a larger learning rate is able to pick up more gradient signals which is expected to reduce loss.
 
 ## Implementation
 

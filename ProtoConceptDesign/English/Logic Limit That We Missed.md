@@ -14,3 +14,5 @@ ML and DL share several conceptual similarities, but their goal remains the same
 ## Conclusion
 
 From the explanations above, it can be concluded that generalization in the context of cross-domain information alignment in a model is not directly influenced by the DL architecture, but rather by other architectures that enable internal cross-domain information alignment and harmonization, thereby enabling the expansion of cognitive functions.
+
+> CoDe: **NSH or Naive Specialists Hierarchy**
