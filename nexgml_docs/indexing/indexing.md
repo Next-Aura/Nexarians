@@ -71,6 +71,7 @@ Determines the optimal maximum index or slice size for sub-sampling, typically u
 
       * `ValueError`: If `maxi` argument is invalid.
 
+...
 ## Usage Examples
 
 ```python

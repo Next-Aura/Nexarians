@@ -2,7 +2,7 @@
 
 ## Overview
 
-GSIC (Gradient Supported Intense Classifier) is an advanced, custom linear classification model implemented in Python. It supports optimization via **mini-batch gradient descent** with **softmax** for multi-class classification and includes regularization options such as **L1 (Lasso)**, **L2 (Ridge)**, and **ElasticNet** to prevent overfitting. The model minimizes **categorical cross-entropy** loss and offers multiple optimizers (**MBGD**, **Adam**, **AdamW**) and learning rate schedulers (**constant**, **invscaling**, **plateau**, **adaptive**). It works with both dense and sparse matrices, offers early stopping, data shuffling, and multi-level verbose logging.
+GSIC (Gradient Supported Intense Classifier) is an advanced, custom linear classification model implemented in Python. It supports optimization via **mini-batch gradient descent** with **softmax** for multi-class classification and includes regularization options such as **L1 (Lasso)**, **L2 (Ridge)**, and **ElasticNet** to prevent overfitting. The model minimizes **categorical cross-entropy** loss and offers multiple optimizers (**MBGD**, **Adam**, **AdamW**) and learning rate schedulers (**constant**, **invscaling**, **plateau**). It works with both dense and sparse matrices, offers early stopping, data shuffling, and multi-level verbose logging.
 
 Perfect for teaching, quick prototyping, or when you need a flexible, interpretable classifier with advanced optimization without heavy dependencies.
 
@@ -81,7 +81,7 @@ $$
 | `early_stopping` | `bool` | `True` | Enable early stop |
 | `verbose` | `int` | `0` | 0 = silent, 1 = progress |
 | `verbosity` | `Literal['light', 'heavy']` | `'light'` | light = standard log information, heavy = more detail log information |
-| `lr_scheduler` | `Literal['constant','invscaling','plateau', 'adative']` | `'invscaling'` | Type of learning rate scheduler |
+| `lr_scheduler` | `Literal['constant','invscaling','plateau']` | `'invscaling'` | Type of learning rate scheduler |
 | `optimizer` | `Literal['mbgd','adam','adamw']` | `'mbgd'` | Optimizer type |
 | `batch_size` | `int` | `16` | Mini-batch size |
 | `power_t` | `float` | `0.25` | Exponent for invscaling |

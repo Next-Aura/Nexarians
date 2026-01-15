@@ -2,7 +2,7 @@
 
 ## Overview
 
-GSBR (Gradient Supported Basic Regressor) is a lightweight, custom linear regression model implemented in Python. It supports optimization via **gradient descent**, includes regularization options such as **L1 (Lasso)**, **L2 (Ridge)**, and **ElasticNet**, and also learning rate schedulers (**constant**, **invscaling**, **plateau**, **adaptive**) to prevent overfitting. The model can minimize **MSE**, **RMSE**, or **MAE** loss functions. It works with both dense and sparse matrices, offers early stopping, data shuffling, and multi-level verbose logging.
+GSBR (Gradient Supported Basic Regressor) is a lightweight, custom linear regression model implemented in Python. It supports optimization via **gradient descent**, includes regularization options such as **L1 (Lasso)**, **L2 (Ridge)**, and **ElasticNet**, and also learning rate schedulers (**constant**, **invscaling**, **plateau**) to prevent overfitting. The model can minimize **MSE**, or **MAE** loss functions. It works with both dense and sparse matrices, offers early stopping, data shuffling, and multi-level verbose logging.
 
 Perfect for teaching, quick prototyping, or when you need a simple, interpretable regressor without heavy dependencies.
 
@@ -71,7 +71,7 @@ MAE uses the **sign** function; RMSE normalises by the current RMSE value.
 | `penalty` | `Literal['l1','l2','elasticnet'] \| None` | `'l2'` | Regularization type |
 | `alpha` | `float` | `0.0001` | Regularization strength |
 | `l1_ratio` | `float` | `0.5` | ElasticNet mix (0 = L2, 1 = L1) |
-| `loss` | `Literal['mse','rmse','mae']` | `'mse'` | Loss function |
+| `loss` | `Literal['mse','mae']` | `'mse'` | Loss function |
 | `fit_intercept` | `bool` | `True` | Add bias term |
 | `tol` | `float` | `0.0001` | Early-stop tolerance |
 | `shuffle` | `bool` | `True` | Shuffle data each epoch |
@@ -79,7 +79,7 @@ MAE uses the **sign** function; RMSE normalises by the current RMSE value.
 | `early_stopping` | `bool` | `True` | Enable early stop |
 | `verbose` | `int` | `0` | 0 = silent, 1 = ~5 % progress, 2 = every epoch |
 | `verbosity` | `Literal['light', 'heavy']` | `'light'` | light = standard log information, heavy = more detail log information |
-| `lr_scheduler` | `Literal['constant','invscaling','plateau', 'adative']` | `'invscaling'` | Type of learning rate scheduler |
+| `lr_scheduler` | `Literal['constant','invscaling','plateau']` | `'invscaling'` | Type of learning rate scheduler |
 | `power_t` | `float` | `0.25` | Exponent for invscaling |
 | `patience` | `int` | `5` | Epochs to wait for plateau |
 | `factor` | `float` | `0.5` | LR reduction factor for plateau |

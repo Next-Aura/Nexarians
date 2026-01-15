@@ -90,6 +90,19 @@ Calculates the R² (coefficient of determination) regression score function.
   * **Raises**:
       * `ValueError`: If the given target label (y_true) is discrete.
 
+### `root_mean_squared_error(y_true, y_pred, dtype=np.float32)`
+
+Calculates the Root Mean Squared Error (RMSE) regression loss.
+
+  * **Parameters**:
+      * `y_true` (`np.ndarray`): True continuous target values.
+      * `y_pred` (`np.ndarray`): Predicted continuous values.
+      * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
+  * **Returns**:
+      * (`float`): The RMSE loss.
+  * **Raises**:
+      * `ValueError`: If y_true or y_pred data has size 0, NaN, or infinity value.
+
 ## Usage Examples
 
 ```python

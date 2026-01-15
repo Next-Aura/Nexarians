@@ -71,7 +71,7 @@ class IntenseRegressor:
       Predict using weights from training session.
 
       **score(X_test, y_test)**: *Return float*
-      Calculate model classification accuracy.
+      Calculate model's R^2 score.
 
       **get_params(deep)**: *Return dict*
       Return model's parameter.
@@ -107,13 +107,13 @@ class IntenseRegressor:
         early_stopping: bool=True,
         verbose: int=0,
         verbosity: Literal['light', 'heavy'] | None = 'light',
-        lr_scheduler: Literal["constant", "invscaling", "plateau", "adaptive"] | None="invscaling", 
+        lr_scheduler: Literal["constant", "invscaling", "plateau"] | None="invscaling", 
         optimizer: Literal["mbgd", "adam", "adamw"] | None="mbgd", 
         batch_size: int=16, 
         power_t: float=0.25, 
         patience: int=5, 
         factor: float=0.5, 
-        delta: int=0.5,
+        delta: int=1.0,
         stoic_iter: int | None = 10,
         epsilon: float=1e-15,
         adalr_window: int=5,
@@ -138,7 +138,7 @@ class IntenseRegressor:
             **l1_ratio**: *float, default=0.5*
             Mixing parameter for elastic net (0 <= l1_ratio <= 1).
 
-            **loss**: *{'mse', 'rmse', 'mae', 'smoothl1'}, default='mse'*
+            **loss**: *{'mse', 'mae', 'smoothl1'}, default='mse'*
             Type of loss function. Includes SmoothL1 loss for robustness.
 
             **fit_intercept**: *bool, default=True*
@@ -163,7 +163,7 @@ class IntenseRegressor:
             **verbosity**: *{'light', 'heavy'}, default='light'*
             Level of detail for verbose output.
 
-            **lr_scheduler**: *{'constant', 'invscaling', 'plateau', 'adaptive'}, default='invscaling'*
+            **lr_scheduler**: *{'constant', 'invscaling', 'plateau'}, default='invscaling'*
             Strategy for learning rate adjustment over iterations.
 
             **optimizer**: *{'mbgd', 'adam', 'adamw'} or None, default='mbgd'*
@@ -181,7 +181,7 @@ class IntenseRegressor:
             **factor**: *float, default=0.5*
             Factor by which the learning rate will be reduced (used if lr_scheduler='plateau').
             
-            **delta**: *float, default=0.5*
+            **delta**: *float, default=1.0*
             Threshold for the Smooth L1 loss function.
 
             **stoic_iter**: *int or None, default=10*
@@ -209,14 +209,14 @@ class IntenseRegressor:
         if verbosity not in ('light', 'heavy'):
             raise ValueError(f"Invalid verbosity argument, {verbosity}. Choose from 'light' or 'heavy'.")
 
-        if loss not in {'mse', 'rmse', 'mae', 'smoothl1'}:
-            raise ValueError(f"Invalid loss argument, {loss}. Choose from 'mse', 'rmse', 'mae', or 'huber'")
+        if loss not in {'mse', 'mae', 'smoothl1'}:
+            raise ValueError(f"Invalid loss argument, {loss}. Choose from 'mse', 'mae', or 'smoothl1'")
         
         if optimizer not in {'mbgd', 'adam', 'adamw'}:
             raise ValueError(f"Invalid optimizer argument, {optimizer}. Choose from 'mbgd', 'adam', or 'adamw'")
         
-        if lr_scheduler not in {'constant', 'invscaling', 'plateau', 'adaptive'}:
-            raise ValueError(f"Invalid lr_scheduler argument, {lr_scheduler}. Choose from 'constant', 'invscaling', 'plateau', or 'adaptive'.")
+        if lr_scheduler not in {'constant', 'invscaling', 'plateau'}:
+            raise ValueError(f"Invalid lr_scheduler argument, {lr_scheduler}. Choose from 'constant', 'invscaling', or 'plateau'.")
         
         if penalty in {'l1', 'elasticnet'} and optimizer == 'adamw':
             raise ValueError("AdamW only supports L2 regularization. Please change the penalty to 'l2'")
@@ -290,10 +290,6 @@ class IntenseRegressor:
         # MSE loss function
         if self.loss == 'mse':
             loss = forlinear.mean_squared_error(y_true, y_pred)
-        
-        # RMSE loss function
-        elif self.loss == 'rmse':
-            loss = forlinear.root_squared_error(y_true, y_pred)
 
         # MAE loss function
         elif self.loss == 'mae':
@@ -301,7 +297,7 @@ class IntenseRegressor:
 
         # Smooth L1 loss function
         elif self.loss == 'smoothl1':
-            loss = forlinear.smoothl1_loss(y_true, y_pred, self.delta)
+            loss = forlinear.smoothl1(y_true, y_pred, self.delta)
         
         # L1 penalty regulation
         if self.penalty == "l1":
@@ -351,11 +347,7 @@ class IntenseRegressor:
         # MSE loss gradient
         if self.loss == 'mse':
             grad_w, grad_b = forlinear.mse_deriv(X, residual, self.intercept)
-        
-        # RMSE loss gradient
-        elif self.loss == 'rmse':
-           grad_w, grad_b = forlinear.rmse_deriv(X, residual, self.intercept)
-        
+                
         # MAE loss gradient
         elif self.loss == 'mae':
            grad_w, grad_b = forlinear.mae_deriv(X, residual, self.intercept)
@@ -497,15 +489,6 @@ class IntenseRegressor:
                 elif self.lr_scheduler == 'invscaling':
                     self.current_lr = self.current_lr / ((i + np.int32(1))**self.power_t + self.epsilon)
                 
-                elif self.lr_scheduler == 'adaptive':
-                    # Adaptive learning rate based on loss ratio
-                    ratio = np.sqrt(abs(np.mean(self.loss_history[-self.window:], dtype=np.float32) / np.mean(self.loss_history[-2 * self.window:-self.window], dtype=np.float32)))
-                    if ratio <= 1:
-                        self.current_lr = np.clip(self.current_lr / (i + np.int32(1))**self.power_t, self.epsilon, 10.0, dtype=np.float32)
-
-                    else:
-                        self.current_lr = np.clip(self.current_lr * np.sqrt(ratio), self.epsilon, 10.0, dtype=np.float32)
-
                 elif self.lr_scheduler == 'plateau':
                         # Get current loss
                         current_loss = self._calculate_loss(y_processed, X_processed @ self.weights + self.b if self.intercept else X_processed @ self.weights)

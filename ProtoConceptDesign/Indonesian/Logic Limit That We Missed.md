@@ -15,4 +15,5 @@ ML maupun DL memiliki beberapa kesamaan dari segi konsep namun tujuannya tetap s
 
 Dari beberapa penjabaran diatas mampu disimpulkan bahwa generalisasi dalam konteks keselarasan informasi lintas domain pada suatu model tidak secara langsung dipengaruhi oleh arsitektur DL namun arsitektur lain yang memungkinkan keselarasan dan harmonisasi informasi lintas domain secara internal yang dengan demikian memungkinkan perluasan fungsi kognitif.
 
-> CoDe: **NSH or Naive Specialists Hierarchy**
+> CoDe: 1. **NSH**
+> Paper: 1. **NSH**

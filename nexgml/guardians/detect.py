@@ -82,7 +82,7 @@ def iscontinuous(a: np.ndarray | list | sparse.spmatrix) -> bool:
     ## Usage Example:
     ```python
     >>> X = [1.0, 2.5, 3.7]
-    >>> is_cont = iscontinious(a=X)
+    >>> is_cont = iscontinuous(a=X)
     >>>
     >>> print("Is continuous:", is_cont)
     >>> # print: 'Is continuous: True'

@@ -2,7 +2,7 @@
 
 ## Overview
 
-GSIR (Gradient Supported Intense Regressor) is an advanced, custom linear regression model implemented in Python. It supports optimization via **mini-batch gradient descent** and includes regularization options such as **L1 (Lasso)**, **L2 (Ridge)**, and **ElasticNet** to prevent overfitting. The model can minimize **MSE**, **RMSE**, **MAE**, or **Smooth L1 (Huber)** loss functions and offers multiple optimizers (**MBGD**, **Adam**, **AdamW**) and learning rate schedulers (**constant**, **invscaling**, **plateau**, **adaptive**). It works with both dense and sparse matrices, offers early stopping, data shuffling, and multi-level verbose logging.
+GSIR (Gradient Supported Intense Regressor) is an advanced, custom linear regression model implemented in Python. It supports optimization via **mini-batch gradient descent** and includes regularization options such as **L1 (Lasso)**, **L2 (Ridge)**, and **ElasticNet** to prevent overfitting. The model can minimize **MSE**, **MAE**, or **Smooth L1 (Huber)** loss functions and offers multiple optimizers (**MBGD**, **Adam**, **AdamW**) and learning rate schedulers (**constant**, **invscaling**, **plateau**). It works with both dense and sparse matrices, offers early stopping, data shuffling, and multi-level verbose logging.
 
 Perfect for teaching, quick prototyping, or when you need a flexible, interpretable regressor with advanced optimization without heavy dependencies.
 
@@ -35,7 +35,7 @@ $$
 - **Smooth L1 (Huber)**: $\frac{1}{N}\sum_{i=1}^{N} \begin{cases} 
   0.5 (y_i - \hat{y}_i)^2 & |y_i - \hat{y}_i| \leq \delta \\ 
   \delta |y_i - \hat{y}_i| - 0.5 \delta^2 & \text{otherwise}
-\end{cases}$
+  \end{cases}$
 
 ### Regularization
 Added to the loss to control model complexity (applied in loss or update step for AdamW):
@@ -76,7 +76,7 @@ MAE uses the **sign** function; RMSE normalises by the current RMSE value; Smoot
 | `penalty` | `Literal['l1','l2','elasticnet'] \| None` | `'l2'` | Regularization type |
 | `alpha` | `float` | `0.001` | Regularization strength |
 | `l1_ratio` | `float` | `0.5` | ElasticNet mix (0 = L2, 1 = L1) |
-| `loss` | `Literal['mse','rmse','mae','smoothl1']` | `'mse'` | Loss function |
+| `loss` | `Literal['mse','mae','smoothl1']` | `'mse'` | Loss function |
 | `fit_intercept` | `bool` | `True` | Add bias term |
 | `tol` | `float` | `0.0001` | Early-stop tolerance |
 | `shuffle` | `bool` | `True` | Shuffle data each epoch |
@@ -84,13 +84,13 @@ MAE uses the **sign** function; RMSE normalises by the current RMSE value; Smoot
 | `early_stopping` | `bool` | `True` | Enable early stop |
 | `verbose` | `int` | `0` | 0 = silent, 1 = ~5 % progress, 2 = every epoch + LR updates |
 | `verbosity` | `Literal['light', 'heavy']` | `'light'` | light = standard log information, heavy = more detail log information |
-| `lr_scheduler` | `Literal['constant','invscaling','plateau', 'adative']` | `'invscaling'` | Type of learning rate scheduler |
+| `lr_scheduler` | `Literal['constant','invscaling','plateau']` | `'invscaling'` | Type of learning rate scheduler |
 | `optimizer` | `Literal['mbgd','adam','adamw']` | `'mbgd'` | Optimizer type |
 | `batch_size` | `int` | `16` | Mini-batch size |
 | `power_t` | `float` | `0.25` | Exponent for invscaling |
 | `patience` | `int` | `5` | Epochs to wait for plateau |
 | `factor` | `float` | `0.5` | LR reduction factor for plateau |
-| `delta` | `float` | `0.5` | Threshold for Smooth L1 loss |
+| `delta` | `float` | `1.0` | Threshold for Smooth L1 loss |
 | `stoic_iter` | `int` | `10` | Warm-up epochs before early stop/scheduler |
 | `epsilon` | `float` | `1e-15` | Small value for numerical stability |
 | `adalr_window` | `int` | `5` | Loss window for adaptive learning rate |

@@ -30,7 +30,7 @@ class L2Regressor:
       Predict using weights from training session.
 
       **score(X_test, y_test)**: *Return float*
-      Calculate model classification accuracy.
+      Calculate model's R^2 score.
 
       **get_params(deep)**: *Return dict*
       Return model's parameter.
@@ -113,7 +113,7 @@ class L2Regressor:
             
         ## Raises:
             **ValueError**: *If input data contains NaN/Inf or if dimensions mismatch.*
-            **np.linalg.LinAlgError**: *If $X^T X + \lambda I$ is singular (rare in Ridge Regression).*
+            **np.linalg.LinAlgError**: *If X^T X + I is singular (rare in Ridge Regression).*
         """
         # Data validation and conversion
         if issparse(X_train):

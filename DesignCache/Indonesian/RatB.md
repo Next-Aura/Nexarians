@@ -9,7 +9,7 @@ AdaLR sebagai konsep penjadwal memiliki keuntungan yang mencolok, yaitu kemampua
 
 ## Dukungan teori
 
-Pendapat pribadi dari hasil pengamatan dan obsevasi ku menyatakan semakin besar loss maka semakin kacau model saat proses training, dan learning rate sebagai pengatur langkah 'pergerakan' model dalam menangkap sinyal gradien punya potensi mengembalikan situasi dengan mengatur loss ke arah yang benar, yaitu arah yang mampu menurunkan loss. Dalam observasi ku, saat loss mengalami kenaikan lr yang lebih besar secara konsisten mampu menurunkan loss, secara matematis hal ini dapat disebabkan karna learning rate yang lebih besar mampu mengambil sinyal gradient lebih banyak yang diharapkan mampu menurukan loss.
+Pendapat pribadi dari hasil pengamatan dan obsevasi ku menyatakan semakin besar loss maka semakin kacau model saat proses training, dan learning rate sebagai pengatur langkah 'pergerakan' model dalam menangkap sinyal gradien punya potensi mengembalikan situasi dengan mengatur loss ke arah yang benar, yaitu arah yang mampu menurunkan loss. Dalam observasi ku, saat loss mengalami kenaikan, lr yang lebih besar secara konsisten mampu menurunkan loss, secara teoritis hal ini dapat disebabkan karna learning rate yang lebih besar mampu mengambil sinyal gradient lebih banyak yang diharapkan mampu menurukan loss.
 
 ## Implementasi
 

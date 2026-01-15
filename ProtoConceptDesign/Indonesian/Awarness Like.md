@@ -36,4 +36,5 @@ Beberapa penjadwal juga membuat lr 'terprogram' secara rumus saat proses trainin
 
 Sifat-sifat lr yang didasari penjadwal bertujuan untuk masalah-masalah spesifik maupun default umum, namun beberapa penjadwal populer aku rasa terlalu terpaku pada penurunan lr dan kekangan rumus matematis. Aku merasa mungkin seharusnya ada penjadwal yang dapat 'mengerti' situasi training dan menyesuaikan diri.
 
-> CoDe: **RatB or Ratio Based**
+> CoDe: 1. **RatB (Cached)**, 2. **ConB**
+> Paper: -

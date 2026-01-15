@@ -3,7 +3,6 @@
   ## Provides:
     - **losses**: *Focused on losses computations.*
     - **probas**: *Focused on probability computations.*
-    - **fortree**: *sub-amo that focus on tree models computations.*
     - **penalties**: *Focused on penalties computations.*
     - **derivs**: *Focused on linear function derivative computations.*
   
@@ -15,8 +14,7 @@
 
 from .losses import (mean_squared_error, 
                      mean_absolute_error, 
-                     root_squared_error, 
-                     smoothl1_loss, 
+                     smoothl1, 
                      categorical_ce, 
                      binary_ce)
 
@@ -38,9 +36,8 @@ from .derivs import (mse_deriv,
 
 __all__ = [
     'mean_squared_error',
-    'mean_absolute_error', 
-    'root_squared_error', 
-    'smoothl1_loss', 
+    'mean_absolute_error',  
+    'smoothl1', 
     'categorical_ce', 
     'binary_ce',
     'softmax',

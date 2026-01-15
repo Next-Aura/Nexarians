@@ -71,10 +71,13 @@ These modules contain the high-speed math used internally.
 | `nexgml.guardians` | **Numerical stability**. Value clipping, invalid value detecting (safe_array, hasinf, hasnan) | `safe_array(array)` |
 
 ## ConceptDesign
-ConceptDesign (CoDe) is a folder where the design of a concept that is material for community research is defined and developed via files with markdown (md) existence.
+*ConceptDesign* (CoDe) is a folder where the design of a concept that is material for community research is defined and developed via files with markdown (md) existence.
 
 ## ProtoConceptDesign
-ProtoConceptDesign (ProCoDe) is a folder that stores the main ideas, basic theorems, main ideas and context definitions of a concept design which are in the 'ConceptDesign' folder. The purpose of separating CoDe and ProCoDe is to provide clarity between concept definitions and context definitions.
+*ProtoConceptDesign* (ProCoDe) is a folder that stores the main ideas, basic theorems, main ideas and context definitions of a concept design which are in the *ConceptDesign* folder. The purpose of separating CoDe and ProCoDe is to provide clarity between concept definitions and context definitions.
+
+## DesignCache
+*DesignCache* is a folder that contains concept designs that are deemed to have failed, the failure in question could be an error in the main idea of ​​the concept from the start, a refutation of the theory on which a concept is based, and other things that can affect the interpretability of the definition and meaning of a concept.
 
 ## 📝 Documentation & Exploration
 
@@ -83,6 +86,7 @@ This repository is dedicated to experimentation, learning, and personal research
 - 🤖 Artificial Intelligence and Machine Learning
 - 💻 Python development and performance optimization
 - 📖 Technical documentation and concept notes
+- 🥼 Designing and developing concepts, theories and hypotheses. Before finally forming its implementation
 
 > ⚠️ This project is intended for exploration and learning purposes only.
 

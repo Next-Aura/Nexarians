@@ -196,44 +196,7 @@ def mean_absolute_error(y_true: np.ndarray, y_pred: np.ndarray, dtype=np.float32
 
     return safe_array(np.mean(np.abs(y_true - y_pred), dtype=dtype), dtype=dtype)
 
-def root_squared_error(y_true: np.ndarray, y_pred: np.ndarray, dtype=np.float32) -> float:
-    """
-    Calculate regression loss using root mean squared error (RMSE) formula.
-
-    ## Args:
-        **y_true**: *np.ndarray*
-        True target data.
-
-        **y_pred**: *np.ndarray*
-        Target prediction.
-
-        **dtype**: *DTypeLike, default=np.float32*
-        Data type output.
-
-    ## Returns:
-        **float**: *Target prediction loss.*
-
-    ## Raises:
-      **ValueError**: *If y_true or y_pred data has size 0, NaN, or infinity value.*
-
-    ## Notes:
-      Calculation is helped by numpy for reaching C-like speed.
-
-    ## Usage Example:
-    ```python
-    >>> pred = X @ coef + bias
-    >>>
-    >>> loss = root_squared_error(y_true=y, y_pred=pred)
-    ```
-    """
-    # Check array safety
-    if not issafe_array(y_true) or not issafe_array(y_pred):
-       raise ValueError("y_true or y_pred data is not safe for numerical operation."
-                        "Please check the size or the value if there's NaN or infinity.")
-
-    return safe_array(np.sqrt(np.mean((y_true - y_pred)**2, dtype=dtype)), dtype=dtype)
-
-def smoothl1_loss(y_true: np.ndarray, y_pred: np.ndarray, delta: float=0.5, dtype=np.float32) -> float:
+def smoothl1(y_true: np.ndarray, y_pred: np.ndarray, delta: float=1.0, dtype=np.float32) -> float:
     """
     Calculate regression loss using smooth L1 (huber) loss formula.
 
@@ -244,7 +207,7 @@ def smoothl1_loss(y_true: np.ndarray, y_pred: np.ndarray, delta: float=0.5, dtyp
         **y_pred**: *np.ndarray*
         Target prediction.
         
-        **delta**: *float*
+        **delta**: *float, default=1.0*
         Function threshold between operation.
 
         **dtype**: *DTypeLike, default=np.float32*

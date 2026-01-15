@@ -114,27 +114,14 @@ Calculates the Mean Absolute Error (MAE) regression loss.
   * **Raises**:
       * `ValueError`: If y_true or y_pred data has size 0, NaN, or infinity value.
 
-### `root_squared_error(y_true, y_pred, dtype=np.float32)`
-
-Calculates the Root Mean Squared Error (RMSE) regression loss.
-
-  * **Parameters**:
-      * `y_true` (`np.ndarray`): True continuous target values.
-      * `y_pred` (`np.ndarray`): Predicted continuous values.
-      * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
-  * **Returns**:
-      * (`float`): The RMSE loss.
-  * **Raises**:
-      * `ValueError`: If y_true or y_pred data has size 0, NaN, or infinity value.
-
-### `smoothl1_loss(y_true, y_pred, delta, dtype=np.float32)`
+### `smoothl1(y_true, y_pred, delta=1.0, dtype=np.float32)`
 
 Calculates the Smooth L1 (Huber) Loss, which is less sensitive to outliers than MSE.
 
   * **Parameters**:
       * `y_true` (`np.ndarray`): True continuous target values.
       * `y_pred` (`np.ndarray`): Predicted continuous values.
-      * `delta` (`float`, default=`0.5`): The threshold point where the function transitions from quadratic to linear.
+      * `delta` (`float`, default=`1.0`): The threshold point where the function transitions from quadratic to linear.
       * `dtype` (`DTypeLike`, default=`np.float32`): Data type output.
   * **Returns**:
       * (`float`): The Smooth L1 loss.
