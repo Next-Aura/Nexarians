@@ -1,6 +1,6 @@
 [project]
 name = "nexgml"
-version = "1.5.0"
+version = "1.5.1"
 description = "NexGML — Next Generation Machine Learning (educational ML utilities)"
 readme = "README.md"
 requires-python = ">=3.10"

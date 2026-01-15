@@ -10,7 +10,8 @@
   ## Note:
     **All the helpers implemented in python programming language.**"""
 
-from .forregress import (r2_score)
+from .forregress import (r2_score,
+                         root_mean_squared_error)
 from .forclassi import (accuracy_score,
                        precision_score,
                        recall_score,
@@ -21,5 +22,6 @@ __all__ = [
     'accuracy_score',
     'precision_score',
     'recall_score',
-    'f1_score'
+    'f1_score',
+    'root_mean_squared_error'
 ]

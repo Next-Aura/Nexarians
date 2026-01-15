@@ -1,4 +1,5 @@
 import numpy as np  # Numpy for numerical computations
+from nexgml.guardians import issafe_array
 
 def lasso(a: np.ndarray, alpha: float, dtype=np.float32) -> float:
     """
@@ -17,8 +18,8 @@ def lasso(a: np.ndarray, alpha: float, dtype=np.float32) -> float:
     ## Returns:
       **float**: *Calculated loss.*
 
-    ## Returns:
-      **None**
+    ## Raises:
+      **ValueError**: *If array data argument has size 0, NaN, or infinity value.*
 
     ## Notes:
       Calculation is helped by numpy for reaching C-like speed.
@@ -33,6 +34,11 @@ def lasso(a: np.ndarray, alpha: float, dtype=np.float32) -> float:
     >>> # Print: 'Penalty:  0.000000025'
     ```
     """
+    # Check array safety
+    if not issafe_array(a):
+       raise ValueError("Array data argument is not safe for numerical operation."
+                        "Please check the size or the value if there's NaN or infinity.")
+
     return dtype(alpha) * np.sum(np.abs(a), dtype=dtype)
 
 def ridge(a: np.ndarray, alpha: float, dtype=np.float32) -> float:
@@ -52,8 +58,8 @@ def ridge(a: np.ndarray, alpha: float, dtype=np.float32) -> float:
     ## Returns:
       **float**: *Calculated loss.*
 
-    ## Returns:
-      **None**
+    ## Raises:
+      **ValueError**: *If array data argument has size 0, NaN, or infinity value.*
 
     ## Notes:
       Calculation is helped by numpy for reaching C-like speed.
@@ -68,6 +74,11 @@ def ridge(a: np.ndarray, alpha: float, dtype=np.float32) -> float:
     >>> # Print: Penalty:  0.00000000000625
     ```
     """
+    # Check array safety
+    if not issafe_array(a):
+       raise ValueError("Array data argument is not safe for numerical operation."
+                        "Please check the size or the value if there's NaN or infinity.")
+
     return dtype(alpha) * np.sum(a**2, dtype=dtype)
 
 def elasticnet(a: np.ndarray, alpha: float, l1_ratio: float=0.5, dtype=np.float32) -> float:
@@ -90,8 +101,8 @@ def elasticnet(a: np.ndarray, alpha: float, l1_ratio: float=0.5, dtype=np.float3
     ## Returns:
       **float**: *Calculated loss.*
 
-    ## Returns:
-      **None**
+    ## Raises:
+      **ValueError**: *If array data argument has size 0, NaN, or infinity value.*
 
     ## Notes:
       Calculation is helped by numpy for reaching C-like speed.
@@ -106,6 +117,11 @@ def elasticnet(a: np.ndarray, alpha: float, l1_ratio: float=0.5, dtype=np.float3
     >>> # Print: 'Penalty:  0.0000000150025'
     ```
     """
+    # Check array safety
+    if not issafe_array(a):
+       raise ValueError("Array data argument is not safe for numerical operation."
+                        "Please check the size or the value if there's NaN or infinity.")
+
     l1_ratio = dtype(l1_ratio)
     # L1 part
     l1 = l1_ratio * np.sum(np.abs(a), dtype=dtype)

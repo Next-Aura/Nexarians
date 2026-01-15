@@ -10,13 +10,14 @@
   ## Note:
     **All the helpers implemented in python programming language.**"""
 
-from .arr import (safe_array)
-from .detect import (hasinf, hasnan, iscontinious, isdiscrete)
+from .arr import (safe_array, issafe_array)
+from .detect import (hasinf, hasnan, iscontinuous, isdiscrete)
 
 __all__ = [
     'safe_array',
     'hasinf',
     'hasnan',
-    'iscontinious',
-    'isdiscrete'
+    'iscontinuous',
+    'isdiscrete',
+    'issafe_array'
 ]

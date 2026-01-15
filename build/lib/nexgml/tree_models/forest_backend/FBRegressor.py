@@ -28,7 +28,7 @@ class ForestBackendRegressor:
       Predict using tree structure from training session.
 
       **score(X_test, y_test)**: *Return float*
-      Calculate model classification accuracy.
+      Calculate model's R^2 score.
 
       **get_params(deep)**: *Return dict*
       Return model's parameter.

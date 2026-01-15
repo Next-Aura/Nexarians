@@ -4,8 +4,7 @@
     - **basic_models**: *Simple implementation of gradient descend model.*
     - **intense_models**: *Advanced implementation of gradient descend model.*
     - **penalty_based**: *Regulation-based model that use penalty formula for training model.*
-    - **regression_based**: *Focused on classifier model that use regression function for training.*
-
+    
   ## See also:
     - **tree_models**
 
@@ -16,8 +15,6 @@ from .basic_models.GSBasicRegressor import BasicRegressor
 from .basic_models.GSBasicClassifier import BasicClassifier
 from .intense_models.GSIntenseRegressor import IntenseRegressor
 from .intense_models.GSIntenseClassifier import IntenseClassifier
-from .regression_based.SRClassifier import SRClassifier
-from .regression_based.MRClassifier import MRClassifier
 from .penalty_based.L1Classifier import L1Classifier
 from .penalty_based.L1Regressor import L1Regressor
 from .penalty_based.L2Classifier import L2Classifier
@@ -30,8 +27,6 @@ __all__ = [
     'BasicClassifier', 
     'IntenseRegressor',
     'IntenseClassifier',
-    'SRClassifier',
-    'MRClassifier',
     'L1Classifier',
     'L1Regressor',
     'L2Classifier',

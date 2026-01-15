@@ -113,7 +113,7 @@ class IntenseClassifier:
         early_stopping: bool=True,
         verbose: int=0,
         verbosity: Literal['light', 'heavy'] | None = 'light',
-        lr_scheduler: Literal["constant", "invscaling", "plateau", "adaptive"] | None="invscaling", 
+        lr_scheduler: Literal["constant", "invscaling", "plateau"] | None="invscaling", 
         optimizer: Literal["mbgd", "adam", "adamw"] | None="mbgd", 
         batch_size: int=16, 
         power_t: float=0.25, 
@@ -122,7 +122,7 @@ class IntenseClassifier:
         stoic_iter: int | None = 10,
         epsilon: float=1e-15,
         adalr_window: int=5,
-        start_w_scale: float=0.01
+        w_init_scale: float=0.01
             ):
         """
         Initialize the SoftIntenseClassifier model.
@@ -164,7 +164,7 @@ class IntenseClassifier:
             **verbosity**: *{'light', 'heavy'}, default='light'*
             Level of detail for verbose output.
             
-            **lr_scheduler**: *{'constant', 'invscaling', 'plateau', 'adaptive'}, default='invscaling'*
+            **lr_scheduler**: *{'constant', 'invscaling', 'plateau'}, default='invscaling'*
             Strategy for learning rate adjustment over iterations.
 
             **optimizer**: *{'mbgd', 'adam', 'adamw'} or None, default='mbgd'*
@@ -191,7 +191,7 @@ class IntenseClassifier:
             **adalr_window**: *int, default=5*
             Loss window for 'adaptive' learning rate (AdaLR) scheduler.
 
-            **start_w_scale**: *float, default=0.01*
+            **w_init_scale**: *float, default=0.01*
             Weight initialization scale.
 
         ## Returns:
@@ -206,8 +206,8 @@ class IntenseClassifier:
         if penalty not in {'l1', 'l2', 'elasticnet', None}:
             raise ValueError(f"Invalid penalty argument {penalty}. Choose from 'l1', 'l2', 'elasticnet', or None.")
         
-        if lr_scheduler not in {'invscaling', 'constant', 'plateau', 'adaptive'}:
-            raise ValueError(f"Invalid lr_scheduler argument {lr_scheduler}. Choose from 'invscaling', 'constant', 'plateau', or 'adaptive'.")
+        if lr_scheduler not in {'invscaling', 'constant', 'plateau'}:
+            raise ValueError(f"Invalid lr_scheduler argument {lr_scheduler}. Choose from 'invscaling', 'constant', or 'plateau'.")
         
         if verbosity not in ('light', 'heavy'):
             raise ValueError(f"Invalid verbosity argument, {verbosity}. Choose from 'light' or 'heavy'.")
@@ -243,7 +243,7 @@ class IntenseClassifier:
         self.verbosity = str(verbosity)            # Verbosity level for logging
         self.epsilon = np.float32(epsilon)         # Small constant to prevent division by zero in computations
         self.window = int(adalr_window)            # AdaLR loss window
-        self.w_input = np.float32(start_w_scale)   # Weight initialize scale
+        self.w_input = np.float32(w_init_scale)    # Weight initialize scale
 
         # ========== INTERNAL VARIABLES ==========
         self.weights = None                        # Model weights (coefficients) matrix of shape (n_features, n_classes)
@@ -371,6 +371,9 @@ class IntenseClassifier:
             if X_test.ndim == 1:
                 X_processed = X_test.reshape(-1, 1)
                 # Reshape 1D to 2D
+
+            else:
+                X_processed = X_test
         else:
             X_processed = X_test
 
@@ -511,15 +514,6 @@ class IntenseClassifier:
                     # Inverse scaling decay
                     self.current_lr = self.current_lr / ((i + np.int32(1))**self.power_t + self.epsilon)
                 
-                elif self.lr_scheduler == 'adaptive':
-                    # Adaptive learning rate based on loss ratio
-                    ratio = np.sqrt(np.mean(self.loss_history[-self.window:], dtype=np.float32) / np.mean(self.loss_history[-2 * self.window:-self.window], dtype=np.float32))
-                    if ratio <= 1:
-                        self.current_lr = np.clip(self.current_lr / (i + 1)**self.power_t, self.epsilon, 10.0, dtype=np.float32)
-
-                    else:
-                        self.current_lr = np.clip(self.current_lr * np.sqrt(ratio), self.epsilon, 10.0, dtype=np.float32)
-
                 elif self.lr_scheduler == 'plateau':
                     # Compute full dataset loss
                     current_loss = self._calculate_loss(y_one_hot, self.predict_proba(X_processed))

@@ -1,5 +1,5 @@
 import numpy as np                          # Numpy for numerical computations
-from nexgml.guardians import safe_array     # For numerical stability
+from nexgml.guardians import safe_array, issafe_array  # For numerical stability
 
 def categorical_ce(y_true: np.ndarray, y_pred_proba: np.ndarray, weighting: bool=True, mean: bool=True, dtype=np.float32, epsilon: float=1e-8) -> np.ndarray | float:
     """
@@ -29,7 +29,7 @@ def categorical_ce(y_true: np.ndarray, y_pred_proba: np.ndarray, weighting: bool
         If mean is True will return float, and if not then will return np.ndarray*
 
     ## Raises:
-        **None**
+      **ValueError**: *If y_true or y_pred_proba data has size 0, NaN, or infinity value.*
 
     ## Notes:
       Calculation is helped by numpy for reaching C-like speed.
@@ -41,6 +41,11 @@ def categorical_ce(y_true: np.ndarray, y_pred_proba: np.ndarray, weighting: bool
     >>> loss = categorical_ce(y_true=y, y_pred_proba=pred_proba, mean=True, epsilon=1e-10)
     ```
     """
+    # Check array safety
+    if not issafe_array(y_true) or not issafe_array(y_pred_proba):
+       raise ValueError("y_true or y_pred_proba data is not safe for numerical operation."
+                        "Please check the size or the value if there's NaN or infinity.")
+
     y_true, y_pred_proba = np.asarray(y_true, dtype=dtype), np.asarray(y_pred_proba, dtype=dtype)
     epsilon = dtype(epsilon)
     y_pred_proba = np.clip(y_pred_proba, epsilon, 1 - epsilon, dtype=dtype)
@@ -89,7 +94,7 @@ def binary_ce(y_true: np.ndarray, y_pred_proba: np.ndarray, mean: bool=True, dty
         If mean is True will return float, and if not then will return np.ndarray*
 
     ## Raises:
-        **None**
+      **ValueError**: *If y_true or y_pred_proba data has size 0, NaN, or infinity value.*
 
     ## Notes:
       Calculation is helped by numpy for reaching C-like speed.
@@ -101,6 +106,11 @@ def binary_ce(y_true: np.ndarray, y_pred_proba: np.ndarray, mean: bool=True, dty
     >>> loss = binary_ce(y_true=y, y_pred_proba=pred_proba, mean=True, epsilon=1e-10)
     ```
     """
+    # Check array safety
+    if not issafe_array(y_true) or not issafe_array(y_pred_proba):
+       raise ValueError("y_true or y_pred_proba data is not safe for numerical operation."
+                        "Please check the size or the value if there's NaN or infinity.")
+
     epsilon = dtype(epsilon)
     y_pred_clip = np.clip(y_pred_proba, epsilon, 1 - epsilon, dtype=dtype)
 
@@ -130,7 +140,7 @@ def mean_squared_error(y_true: np.ndarray, y_pred: np.ndarray, dtype=np.float32)
         **float**: *Target prediction loss.*
 
     ## Raises:
-        **None**
+      **ValueError**: *If y_true or y_pred data has size 0, NaN, or infinity value.*
 
     ## Notes:
       Calculation is helped by numpy for reaching C-like speed.
@@ -142,6 +152,11 @@ def mean_squared_error(y_true: np.ndarray, y_pred: np.ndarray, dtype=np.float32)
     >>> loss = mean_squared_error(y_true=y, y_pred=pred)
     ```
     """
+    # Check array safety
+    if not issafe_array(y_true) or not issafe_array(y_pred):
+       raise ValueError("y_true or y_pred data is not safe for numerical operation."
+                        "Please check the size or the value if there's NaN or infinity.")
+
     return safe_array(np.mean((y_true - y_pred)**2, dtype=dtype), dtype=dtype)
 
 def mean_absolute_error(y_true: np.ndarray, y_pred: np.ndarray, dtype=np.float32) -> float:
@@ -162,7 +177,7 @@ def mean_absolute_error(y_true: np.ndarray, y_pred: np.ndarray, dtype=np.float32
         **float**: *Target prediction loss.*
 
     ## Raises:
-        **None**
+      **ValueError**: *If y_true or y_pred data has size 0, NaN, or infinity value.*
 
     ## Notes:
       Calculation is helped by numpy for reaching C-like speed.
@@ -174,41 +189,14 @@ def mean_absolute_error(y_true: np.ndarray, y_pred: np.ndarray, dtype=np.float32
     >>> loss = mean_absolute_error(y_true=y, y_pred=pred)
     ```
     """
+    # Check array safety
+    if not issafe_array(y_true) or not issafe_array(y_pred):
+       raise ValueError("y_true or y_pred data is not safe for numerical operation."
+                        "Please check the size or the value if there's NaN or infinity.")
+
     return safe_array(np.mean(np.abs(y_true - y_pred), dtype=dtype), dtype=dtype)
 
-def root_squared_error(y_true: np.ndarray, y_pred: np.ndarray, dtype=np.float32) -> float:
-    """
-    Calculate regression loss using root mean squared error (RMSE) formula.
-
-    ## Args:
-        **y_true**: *np.ndarray*
-        True target data.
-
-        **y_pred**: *np.ndarray*
-        Target prediction.
-
-        **dtype**: *DTypeLike, default=np.float32*
-        Data type output.
-
-    ## Returns:
-        **float**: *Target prediction loss.*
-
-    ## Raises:
-        **None**
-
-    ## Notes:
-      Calculation is helped by numpy for reaching C-like speed.
-
-    ## Usage Example:
-    ```python
-    >>> pred = X @ coef + bias
-    >>>
-    >>> loss = root_squared_error(y_true=y, y_pred=pred)
-    ```
-    """
-    return safe_array(np.sqrt(np.mean((y_true - y_pred)**2, dtype=dtype)), dtype=dtype)
-
-def smoothl1_loss(y_true: np.ndarray, y_pred: np.ndarray, delta: float=0.5, dtype=np.float32) -> float:
+def smoothl1(y_true: np.ndarray, y_pred: np.ndarray, delta: float=1.0, dtype=np.float32) -> float:
     """
     Calculate regression loss using smooth L1 (huber) loss formula.
 
@@ -219,7 +207,7 @@ def smoothl1_loss(y_true: np.ndarray, y_pred: np.ndarray, delta: float=0.5, dtyp
         **y_pred**: *np.ndarray*
         Target prediction.
         
-        **delta**: *float*
+        **delta**: *float, default=1.0*
         Function threshold between operation.
 
         **dtype**: *DTypeLike, default=np.float32*
@@ -229,7 +217,7 @@ def smoothl1_loss(y_true: np.ndarray, y_pred: np.ndarray, delta: float=0.5, dtyp
         **float**: *Target prediction loss.*
 
     ## Raises:
-        **None**
+      **ValueError**: *If y_true or y_pred data has size 0, NaN, or infinity value.*
 
     ## Notes:
       Calculation is helped by numpy for reaching C-like speed.
@@ -241,6 +229,11 @@ def smoothl1_loss(y_true: np.ndarray, y_pred: np.ndarray, delta: float=0.5, dtyp
     >>> loss = smoothl1_loss(y_true=y, y_pred=pred, delta=1.0)
     ```
     """
+    # Check array safety
+    if not issafe_array(y_true) or not issafe_array(y_pred):
+       raise ValueError("y_true or y_pred data is not safe for numerical operation."
+                        "Please check the size or the value if there's NaN or infinity.")
+
     diff = np.abs(y_true - y_pred)
     loss = np.where(diff < delta, 0.5 * diff**2 / delta, diff - 0.5 * delta)
 

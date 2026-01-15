@@ -47,7 +47,7 @@ class BasicRegressor:
       Predict using weights from training session.
 
       **score(X_test, y_test)**: *Return float*
-      Calculate model classification accuracy.
+      Calculate model's R^2 score.
 
       **get_params(deep)**: *Return dict*
       Return model's parameter.
@@ -71,11 +71,11 @@ class BasicRegressor:
     def __init__(
             self, 
             max_iter: int=1000, 
-            learning_rate: float=0.01, 
+            learning_rate: float=0.05, 
             penalty: Optional[Literal["l1", "l2", "elasticnet"]] | None="l2", 
             alpha: float=0.0001, 
             l1_ratio: float=0.5, 
-            loss: Literal["mse", "rmse", "mae"] | None="mse",
+            loss: Literal["mse", "mae"] | None="mse",
             fit_intercept: bool=True, 
             tol: float=0.0001,
             shuffle: bool | None=True,
@@ -83,14 +83,14 @@ class BasicRegressor:
             early_stopping: bool=True,
             verbose: int=0,
             verbosity: Literal["light", "heavy"] | None = "light",
-            lr_scheduler: Literal["constant", "invscaling", "plateau", "adaptive"] | None='invscaling',
+            lr_scheduler: Literal["constant", "invscaling", "plateau"] | None='invscaling',
             power_t: float=0.25,
             patience: int=5,
             factor: float=0.5,
             stoic_iter: int | None = 10,
             epsilon: float=1e-15,
             adalr_window: int=5,
-            start_w_scale: float=0.01
+            w_init_scale: float=0.01
             ):
         """
         Initialize the BasicRegressor model.
@@ -111,7 +111,7 @@ class BasicRegressor:
             **l1_ratio**: *float, default=0.5*
             Mixing parameter for elastic net (0 <= l1_ratio <= 1).
 
-            **loss**: *{'mse', 'rmse', 'mae'}, default='mse'*
+            **loss**: *{'mse', 'mae'}, default='mse'*
             Type of loss function.
 
             **fit_intercept**: *bool, default=True*
@@ -156,7 +156,7 @@ class BasicRegressor:
             **adalr_window**: *int, default=5*
             Loss window for 'adaptive' learning rate (AdaLR) scheduler.
 
-            **start_w_scale**: *float, default=0.01*
+            **w_init_scale**: *float, default=0.01*
             Weight initialization scale.
 
         ## Returns:
@@ -170,11 +170,11 @@ class BasicRegressor:
         if penalty not in (None, 'l1', 'l2', 'elasticnet'):
            raise ValueError(f"Invalid penalty argument, {penalty}. Choose from 'l1', 'l2', or 'elasticnet'.")
 
-        if loss not in ('mse', 'rmse', 'mae'):
-            raise ValueError(f"Invalid loss argument, {loss}. Choose from 'mse', 'rmse', or 'mae'.")
+        if loss not in ('mse', 'mae'):
+            raise ValueError(f"Invalid loss argument, {loss}. Choose from 'mse', or 'mae'.")
         
-        if lr_scheduler not in {'invscaling', 'constant', 'plateau', 'adaptive'}:
-            raise ValueError(f"Invalid lr_scheduler argument, {lr_scheduler}. Choose from 'invscaling', 'constant', 'plateau', or 'adaptive'.")
+        if lr_scheduler not in {'invscaling', 'constant', 'plateau'}:
+            raise ValueError(f"Invalid lr_scheduler argument, {lr_scheduler}. Choose from 'invscaling', 'constant', or 'plateau'.")
         
         if verbosity not in ('light', 'heavy'):
             raise ValueError(f"Invalid verbosity argument, {verbosity}. Choose from 'light' or 'heavy'.")
@@ -202,7 +202,7 @@ class BasicRegressor:
         self.factor = np.float32(factor)           # Factor by which to reduce learning rate on plateau
         self.stoic_iter = int(stoic_iter)          # Warm-up iterations before applying early stopping and lr scheduler
         self.window = int(adalr_window)            # AdaLR loss window
-        self.w_input = np.float32(start_w_scale)   # Weight initialize scale
+        self.w_input = np.float32(w_init_scale)   # Weight initialize scale
 
         self.l1_ratio = np.float32(l1_ratio)       # Elastic net mixing ratio
         self.alpha = np.float32(alpha)             # Alpha for regularization power
@@ -236,10 +236,6 @@ class BasicRegressor:
         # MSE loss function
         if self.loss == 'mse':
             loss = forlinear.mean_squared_error(y_true, y_pred)
-        
-        # RMSE loss function
-        elif self.loss == 'rmse':
-            loss = forlinear.root_squared_error(y_true, y_pred)
 
         # MAE loss function
         elif self.loss == 'mae':
@@ -293,11 +289,7 @@ class BasicRegressor:
         # MSE loss gradient
         if self.loss == 'mse':
             grad_w, grad_b = forlinear.mse_deriv(X, error, self.intercept)
-        
-        # RMSE loss gradient
-        elif self.loss == 'rmse':
-           grad_w, grad_b = forlinear.rmse_deriv(X, error, self.intercept)
-        
+                
         # MAE loss gradient
         elif self.loss == 'mae':
            grad_w, grad_b = forlinear.mae_deriv(X, error, self.intercept)
@@ -409,15 +401,6 @@ class BasicRegressor:
                 elif self.lr_scheduler == 'invscaling':
                     # Inverse scaling decay
                     self.current_lr = self.current_lr / ((i + np.int32(1))**self.power_t + self.epsilon)
-
-                elif self.lr_scheduler == 'adaptive':
-                    # Adaptive learning rate based on loss ratio
-                    ratio = np.sqrt(np.mean(self.loss_history[-self.window:], dtype=np.float32) / np.mean(self.loss_history[-2 * self.window:-self.window], dtype=np.float32))
-                    if ratio <= 1:
-                        self.current_lr = np.clip(self.current_lr / (i + 1)**self.power_t, self.epsilon, 10.0, dtype=np.float32)
-
-                    else:
-                        self.current_lr = np.clip(self.current_lr * np.sqrt(ratio), self.epsilon, 10.0, dtype=np.float32)
                 
                 # Plateau learning rate scheduler
                 elif self.lr_scheduler == 'plateau':
