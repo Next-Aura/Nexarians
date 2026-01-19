@@ -27,7 +27,7 @@ def hasinf(arr: np.ndarray | list | sparse.spmatrix) -> bool:
     >>> # print: 'Has infinity: True'
     ```
     """
-    arr = np.asarray(arr)
+    arr = np.asarray(arr) if not sparse.issparse(arr) else arr.toarray()
     stat = np.any(np.isinf(arr))
 
     return stat
@@ -58,7 +58,7 @@ def hasnan(arr: np.ndarray | list | sparse.spmatrix) -> bool:
     >>> # print: 'Has nan: True'
     ```
     """
-    arr = np.asarray(arr)
+    arr = np.asarray(arr) if not sparse.issparse(arr) else arr.toarray()
     stat = np.any(np.isnan(arr))
 
     return stat

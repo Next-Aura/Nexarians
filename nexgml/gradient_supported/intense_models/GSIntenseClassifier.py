@@ -366,18 +366,15 @@ class IntenseClassifier:
         ## Raises:
             **ValueError**: *If model is not trained.*
         """
-        X_test = np.asarray(X_test)
         if not issparse(X_test):
+            X_test = np.asarray(X_test)
             if X_test.ndim == 1:
-                X_processed = X_test.reshape(-1, 1)
-                # Reshape 1D to 2D
+                raise ValueError("Input X_test must be 2D array or sparse matrix.")
 
             else:
                 X_processed = X_test
         else:
-            X_processed = X_test
-
-        X_processed = X_processed.astype(np.float32)
+            X_processed = X_test.astype(np.float32)
 
         if self.n_classes == 0:
             raise ValueError("Model not trained. Call fit() first.")
@@ -416,9 +413,8 @@ class IntenseClassifier:
         if not issparse(X_train):
             # Check if input is sparse matrix
             if X_train.ndim == 1:
-                # If 1D array, reshape to 2D
-                X_train = X_train.reshape(-1, 1)
-                # Reshape for single feature
+                raise ValueError("Input X_test must be 2D array or sparse matrix.")
+            
             X_processed = np.asarray(X_train, dtype=np.float32)
             # Convert to float32 numpy array
         

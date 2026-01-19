@@ -414,8 +414,7 @@ class IntenseRegressor:
         
         # Check if the data is 1D
         if X_processed.ndim == 1:
-            # Reshape to 2D
-            X_processed = X_processed.reshape(-1, 1)
+            raise ValueError("Input X_test must be 2D array or sparse matrix.")
         
         # y data type check
         if isinstance(y_train, (np.ndarray, list, tuple)):
@@ -694,12 +693,13 @@ class IntenseRegressor:
         ## Raises:
             **ValueError**: *If model weights are not defined (model not trained).*
         """
-        # Check if data is 1D and reshape to 2D if is it
-        X_test = np.asarray(X_test)
-        if X_test.ndim == 1:
-            X_processed = X_test.reshape(-1, 1).astype(np.float32)
-        
-        # Or let it as is
+        if not issparse(X_test):
+            X_test = np.asarray(X_test)
+            if X_test.ndim == 1:
+                raise ValueError("Input X_test must be 2D array or sparse matrix.")
+
+            else:
+                X_processed = X_test
         else:
             X_processed = X_test.astype(np.float32)
         

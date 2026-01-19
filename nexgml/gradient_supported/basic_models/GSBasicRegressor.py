@@ -331,7 +331,7 @@ class BasicRegressor:
         # Check if non-sparse data is 1D and reshape to 2D if is it
         if not issparse(X_train):
           if X_train.ndim == 1:
-            X_processed = X_train.reshape(-1, 1).astype(np.float32)
+            raise ValueError("Input X_train must be 2D array or sparse matrix.")
 
           else:
             X_processed = np.asarray(X_train, dtype=np.float32)
@@ -505,11 +505,13 @@ class BasicRegressor:
         ## Raises:
             **ValueError**: *If model weights are not defined (model not trained).*
         """
-        # Check if data is 1D and reshape to 2D if is it
-        if X_test.ndim == 1:
-            X_processed = X_test.reshape(-1, 1).astype(np.float32)
-        
-        # Or let it as is
+        if not issparse(X_test):
+            X_test = np.asarray(X_test)
+            if X_test.ndim == 1:
+                raise ValueError("Input X_test must be 2D array or sparse matrix.")
+
+            else:
+                X_processed = X_test
         else:
             X_processed = X_test.astype(np.float32)
         
